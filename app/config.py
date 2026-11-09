@@ -1,12 +1,15 @@
 """Settings, all read from environment variables (see .env.example)."""
 import os
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./straywatch.db")
+# Empty values (e.g. an unset field on Render) fall back to the defaults.
+DATABASE_URL = os.environ.get("DATABASE_URL") or "sqlite:///./straywatch.db"
 # Render/Neon give "postgres://"; SQLAlchemy wants "postgresql://".
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://"):]
 
-PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
+# Render sets RENDER_EXTERNAL_URL automatically, so the public address works without extra setup.
+PUBLIC_BASE_URL = (os.environ.get("PUBLIC_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL")
+                   or "http://localhost:8000").rstrip("/")
 
 # BharatCode (Adaption) models. The SDK reads ADAPTION_API_KEY itself.
 VISION_MODEL = os.environ.get("SW_VISION_MODEL", "qwen3.5-397b")      # triage, matching
@@ -17,11 +20,11 @@ AI_TIMEOUT = float(os.environ.get("SW_AI_TIMEOUT", "60"))
 # WhatsApp Cloud API (Meta)
 WA_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
 WA_PHONE_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
-WA_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "straywatch-verify")
+WA_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN") or "straywatch-verify"
 WA_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")  # optional: checks webhook signatures
 WA_DISPLAY_NUMBER = os.environ.get("WHATSAPP_DISPLAY_NUMBER", "")  # e.g. 919800000000, for wa.me links
 WA_ALERT_TEMPLATE = os.environ.get("WHATSAPP_ALERT_TEMPLATE", "")  # approved template for alerts outside 24 h
-WA_TEMPLATE_LANG = os.environ.get("WHATSAPP_TEMPLATE_LANG", "en")
+WA_TEMPLATE_LANG = os.environ.get("WHATSAPP_TEMPLATE_LANG") or "en"
 GRAPH = "https://graph.facebook.com/v21.0"
 
 # Rescue rules
