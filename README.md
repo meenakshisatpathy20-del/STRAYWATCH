@@ -8,7 +8,9 @@ dogs and cows, powered by the **BharatCode model API**.
 > Send one photo. StrayWatch remembers the animals on your street, gets help in minutes when one is hurt, and helps
 > lost cows and dogs find their way home, in English, हिंदी, বাংলা, தமிழ், తెలుగు or मराठी.
 
-🌐 **Live demo:** _add your Render URL here_ · 💬 **WhatsApp:** _add your bot number here_ · 🧪 `11 tests passing`
+🌐 **Live demo: [straywatch-0h6w.onrender.com](https://straywatch-0h6w.onrender.com)** (try it in your browser, no sign-up) · 🏙️ [City view](https://straywatch-0h6w.onrender.com/city) · 🧪 `11 tests passing`
+
+> The free server sleeps when idle, so the first visit can take up to a minute to wake up.
 
 ---
 

@@ -27,6 +27,7 @@ All model calls go through the BharatCode (Adaption) Responses API with the offi
 Design rule: the model reads and compares; plain code decides and enforces (helper radius, escalation timers,
 privacy, confidence thresholds). Every model call is timed and shown in a live trace on the website.
 
+Live demo: https://straywatch-0h6w.onrender.com
 Repository: https://github.com/meenakshisatpathy20-del/straywatch
 Run: see README.md (pip install -r requirements.txt; uvicorn app.main:app)
 Built by: meenakshisatpathy20-del, Ranchi
