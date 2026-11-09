@@ -1,0 +1,49 @@
+{% import "_doodles.html" as d %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Have you seen {{ p.name }}? · StrayWatch</title>
+<meta property="og:title" content="Have you seen {{ p.name }}? 🐾">
+<meta property="og:description" content="{{ p.species|title }} lost near {{ p.area }}. Tap if you've seen them. The owner's number is never shown.">
+{% if p.photo %}<meta property="og:image" content="{{ base }}{{ p.photo }}">{% endif %}
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&family=Gochi+Hand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main class="wrap" style="max-width:520px;padding-top:20px;padding-bottom:40px;display:flex;flex-direction:column;gap:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <a class="logo" href="/">{{ d.dog(36) }}<span style="font-size:22px">StrayWatch</span></a>
+    <span class="tag {{ 'found' if p.status=='found' else 'lost' }}">{{ 'HOME!' if p.status=='found' else 'LOST' }} · {{ p.code }}</span>
+  </div>
+  <div class="card" style="background:{{ 'var(--mint)' if p.status=='found' else 'var(--coral)' }};display:flex;align-items:center;gap:12px;padding:16px">
+    {{ d.cow(64) if p.species=='cow' else d.dog(64) }}
+    <div>
+      {% if p.status=='found' %}<h1 style="font-size:32px">{{ p.name }} is home!</h1><div class="hand" style="font-size:20px">thank you, neighbours 💛</div>
+      {% else %}<h1 style="font-size:32px">Have you seen {{ p.name }}?</h1><div style="font-family:'Baloo 2';font-weight:700;font-size:19px">क्या आपने {{ p.name }} को देखा?</div>{% endif %}
+    </div>
+  </div>
+  {% if p.photo %}<img src="{{ p.photo }}" alt="Photo of {{ p.name }}" style="width:100%;border-radius:20px;border:2.5px solid var(--ink)">{% endif %}
+  <div class="card" style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 10px;font-size:16px">
+    <b>Animal</b><span>{{ p.species|title }}</span>
+    <b>Looks</b><span>{{ p.looks or 'See photo' }}</span>
+    <b>Last seen</b><span>{{ p.area }}</span>
+    <b>When</b><span>{{ p.when }}</span>
+  </div>
+  {% if p.status!='found' %}
+  <a class="btn sun big" href="{{ seen_link }}">I've seen {{ p.name }}!</a>
+  <button class="btn" id="share" type="button">Share this poster</button>
+  <p class="hand" style="font-size:19px;text-align:center;color:var(--ink2);margin:0">Tapping "I've seen" opens a chat with StrayWatch.<br>The owner's number is never shown.</p>
+  {% endif %}
+</main>
+<script>
+document.getElementById("share")?.addEventListener("click", async () => {
+  const data = { title: document.title, text: "Please help find {{ p.name }} 🐾", url: location.href };
+  if (navigator.share) { try { await navigator.share(data); } catch (e) {} }
+  else { await navigator.clipboard.writeText(location.href); alert("Link copied! Paste it in your local WhatsApp groups."); }
+});
+</script>
+</body>
+</html>

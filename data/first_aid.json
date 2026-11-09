@@ -1,0 +1,110 @@
+{
+  "_note": "Reviewed safety-first guidance for members of the public. The AI only CHOOSES a card; it never writes medical advice. Every card starts with personal safety and ends with when to get professional help.",
+  "_sources": {
+    "PFA": "People For Animals India, Emergency first aid: https://www.peopleforanimalsindia.org/public/first-aid",
+    "HW": "Humane World for Animals, How to safely help a stray: https://www.humaneworld.org/en/resources/how-safely-help-stray-pet",
+    "BC": "Blue Cross (UK), Basic first aid for dogs: https://www.bluecross.org.uk/1958-2781/basic-first-aid.html",
+    "WHO": "World Health Organization, Rabies fact sheet: https://www.who.int/news-room/fact-sheets/detail/rabies"
+  },
+  "cards": {
+    "road_injury": {
+      "title": "Hurt by a vehicle",
+      "steps": [
+        "Keep yourself safe first. Don't step into moving traffic.",
+        "Don't touch or lift the animal. A scared, hurt animal can bite.",
+        "Stand where drivers can see you and wave them to slow down.",
+        "Keep people and other animals back so it stays calm.",
+        "If a helper asks you to, a cloth or cardboard can be placed nearby for shade. Don't force water or food."
+      ],
+      "sources": ["PFA", "HW", "BC"]
+    },
+    "bleeding": {
+      "title": "Bleeding",
+      "steps": [
+        "Don't touch the animal with bare hands. A hurt animal can bite.",
+        "Keep it calm and still. Stay back and keep the area quiet.",
+        "Only a trained helper should press a clean cloth on the wound.",
+        "Don't put turmeric, oil or powders on the wound."
+      ],
+      "sources": ["PFA", "BC"]
+    },
+    "trapped": {
+      "title": "Trapped or stuck",
+      "steps": [
+        "Don't pull the animal out yourself. You can hurt it, or get bitten.",
+        "Note exactly where it is stuck and how (drain, wire, gate, well).",
+        "Keep a crowd from gathering. Noise makes it panic.",
+        "Wait for a helper with gloves and tools."
+      ],
+      "sources": ["PFA", "HW"]
+    },
+    "aggressive_or_scared": {
+      "title": "Scared or aggressive animal",
+      "steps": [
+        "Keep a safe distance. Don't stare, shout or run.",
+        "Don't try to catch or feed it by hand.",
+        "Keep children and other animals away.",
+        "Helpers with experience will handle it."
+      ],
+      "sources": ["HW"]
+    },
+    "heat_stress": {
+      "title": "Weak in the heat",
+      "steps": [
+        "Don't touch it if it seems scared or hurt.",
+        "If it is calm, place a bowl of clean water near it. Don't pour water into its mouth.",
+        "Give shade with cloth or cardboard if you can do it safely."
+      ],
+      "sources": ["BC", "HW"]
+    },
+    "cattle_on_road": {
+      "title": "Cattle on the road",
+      "steps": [
+        "Never try to push or chase cattle on a busy road. They can kick or run into traffic.",
+        "Warn drivers: stand safely at the side and signal them to slow down.",
+        "At night, a phone torch helps drivers see you, not the animal.",
+        "Wait for the helper or municipal team to move it safely."
+      ],
+      "sources": ["HW"]
+    },
+    "sick": {
+      "title": "Looks sick",
+      "steps": [
+        "Don't touch it with bare hands.",
+        "Note what you see: vomiting, not walking, wounds, eye or skin problems.",
+        "Keep a small bowl of clean water nearby if it's calm.",
+        "Don't give human medicines like paracetamol. They can be poisonous to animals."
+      ],
+      "sources": ["BC", "PFA"]
+    },
+    "dead_animal": {
+      "title": "Animal has died",
+      "steps": [
+        "Thank you for caring. Please don't touch it.",
+        "If it's on the road, warn drivers from a safe place.",
+        "StrayWatch will share how to reach the municipal team for removal."
+      ],
+      "sources": ["HW"]
+    },
+    "puppies_or_kittens": {
+      "title": "Babies on their own",
+      "steps": [
+        "Don't pick them up straight away. The mother may be close by.",
+        "Watch from a distance for a while.",
+        "If they're in danger (road, rain, drain), a helper will move them to a safe spot nearby."
+      ],
+      "sources": ["HW"]
+    },
+    "general": {
+      "title": "Stay safe while you help",
+      "steps": [
+        "Keep a safe distance and stay calm.",
+        "Don't touch, lift or feed the animal by hand.",
+        "Keep people and traffic away from it."
+      ],
+      "sources": ["HW"]
+    }
+  },
+  "bite_rule": "If anyone is bitten or scratched: wash the wound with soap and running water for 15 minutes, and go to a hospital for a rabies vaccine today. Rabies is almost always fatal once symptoms start, and fully preventable with prompt vaccination.",
+  "bite_sources": ["WHO"]
+}
