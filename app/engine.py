@@ -791,7 +791,7 @@ def match_message(s, post: LostPost, sight: Sighting, mres: dict, checked: int |
     dist = km(post.lat, post.lon, sight.lat, sight.lon)
     extra = f"\n(I checked {checked} photos sent nearby.)" if checked else ""
     return Out(post.owner_id, f"*Maybe {post.name}!* 🔎💛\nSeen {ist(sight.created)} about {dist:.1f} km "
-                              f"from where they were lost.\nWhy: {mres['reason']}{extra}\nThe exact spot is shared once you confirm.",
+                              f"from where they were lost.{extra}\nPlease look at the photo carefully. The exact spot is shared once you confirm.",
                image_url=photo_url(sight.photo_id),
                buttons=[(f"lm:yes:{post.id}:{sight.id}", f"Yes, it's {post.name}"[:20]),
                         (f"lm:no:{post.id}:{sight.id}", "Not them")])
