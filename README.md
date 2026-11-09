@@ -2,18 +2,19 @@
 
 # 🐾 StrayWatch
 
-**Every street friend, known and cared for.** A WhatsApp assistant for the people who look after India's community
-dogs and cows, powered by the **BharatCode model API**.
+**Every street friend, known and cared for.** A free, installable mobile web app for the people who look after India's
+community dogs and cows, with an optional WhatsApp add-on, powered by the **BharatCode model API**.
 
 > Send one photo. StrayWatch remembers the animals on your street, gets help in minutes when one is hurt, and helps
 > lost cows and dogs find their way home, in English, हिंदी, বাংলা, தமிழ், తెలుగు or मराठी.
 
-🌐 **Live demo: [straywatch-0h6w.onrender.com](https://straywatch-0h6w.onrender.com)** (try it in your browser, no sign-up) · 🏙️ [City view](https://straywatch-0h6w.onrender.com/city) · 🧪 `11 tests passing`
+🌐 **Live: [straywatch-0h6w.onrender.com](https://straywatch-0h6w.onrender.com)** · 📱 **[Open the app](https://straywatch-0h6w.onrender.com/app)** · 🏙️ [City view](https://straywatch-0h6w.onrender.com/city) · 🧪 `11 tests passing`
 
 > The free server sleeps when idle, so the first visit can take up to a minute to wake up.
 >
-> **Status:** the website runs the full assistant live. The WhatsApp connection is built and tested with simulated
-> Meta webhooks; going live on a WhatsApp number is waiting on Meta business verification.
+> **Status:** the app and website run live: open [/app](https://straywatch-0h6w.onrender.com/app) on a phone and
+> "Add to home screen". The WhatsApp add-on is built and tested with simulated Meta webhooks; going live on a WhatsApp
+> number is waiting on Meta business verification.
 
 ---
 
@@ -41,13 +42,16 @@ makes rescue fast and lost animals findable.
 | 🚨 **Rescue SOS** | Anyone who sees a hurt animal | Photo (or words at night) + location → AI triage → if it's a registered animal, **its caretaker is alerted first**, then the nearest volunteers. **No reply in 3 minutes → it moves on by itself** and keeps the reporter updated. Safety-first first aid with sources. |
 | 🔎 **Lost & Found** | Cattle and dog owners | Post a photo → the AI **searches every photo people sent nearby**, checks each new one against open posters, and pings the owner on a match. A shareable public poster never shows the owner's number or exact spot. |
 
-Everything runs inside **WhatsApp** (no app to install), and the **website** has the same assistant for anyone to try,
-with a live view of every AI step and a second phone showing the caretaker's side. A **City view** turns the same data
+It's a **mobile web app** that opens in any phone browser and installs to the home screen like a normal app, with no
+app store. The same assistant can also be reached through an optional **WhatsApp add-on**. The **website** has a guided
+demo with a live view of every AI step and a second phone showing the caretaker's side. A **City view** turns the same data
 into where NGOs and municipalities should act: vaccination and sterilisation coverage, response times, and cattle
 hotspots on roads.
 
 
 ## Screenshots
+
+<p align="center"><img src="docs/screenshots/8-app-on-phone.jpg" alt="The StrayWatch app on a phone, in Hindi: chat, lost and found, and more tabs" width="820"><br><b>The app on a phone</b> (installable from the browser, shown in Hindi)</p>
 
 | | |
 |---|---|

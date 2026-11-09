@@ -13,7 +13,7 @@ h1,h2,h3,.display{font-family:"Baloo 2",Nunito,sans-serif;font-weight:800;line-h
 .hand{font-family:"Gochi Hand",cursive}
 .wrap{max-width:1140px;margin:0 auto;padding:0 20px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border:2.5px solid var(--ink);
-  border-radius:16px;background:var(--white);color:var(--ink);font:800 16px Nunito,sans-serif;text-decoration:none;cursor:pointer;
+  border-radius:16px;background:var(--white);color:var(--ink);font:800 16px Nunito,"Noto Sans Devanagari","Noto Sans Bengali","Noto Sans Tamil","Noto Sans Telugu",sans-serif;text-decoration:none;cursor:pointer;
   box-shadow:3px 3px 0 var(--ink);transition:transform .08s,box-shadow .08s}
 .btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink);color:var(--ink)}
 .btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
@@ -81,7 +81,7 @@ section{padding:46px 0}
 .bubble.me{align-self:flex-end;background:var(--mint-soft);border-radius:18px 18px 6px 18px}
 .bubble img{display:block;max-width:100%;border-radius:12px;border:2px solid var(--ink);margin-bottom:6px}
 .bubble .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.bubble .btns button{min-height:42px;flex:1 1 auto;border:2.5px solid var(--ink);border-radius:13px;background:var(--sun);font:800 14px Nunito;cursor:pointer;box-shadow:2px 2px 0 var(--ink);padding:0 10px;color:var(--ink)}
+.bubble .btns button{min-height:42px;flex:1 1 auto;border:2.5px solid var(--ink);border-radius:13px;background:var(--sun);font:800 14px Nunito,"Noto Sans Devanagari","Noto Sans Bengali","Noto Sans Tamil","Noto Sans Telugu",sans-serif;cursor:pointer;box-shadow:2px 2px 0 var(--ink);padding:0 10px;color:var(--ink)}
 .bubble .btns button:nth-child(2){background:#fff}.bubble .btns button:nth-child(3){background:var(--sky-soft)}
 .bubble .btns button:disabled{opacity:.45;cursor:default}
 .bubble a.link{display:inline-block;margin-top:6px;font-weight:800;word-break:break-all}
@@ -99,7 +99,7 @@ section{padding:46px 0}
 .trace .ms{color:var(--muted);font-size:12px}
 .trace .empty{color:var(--muted);font-size:14px}
 .tabs{display:flex;gap:6px;padding:8px 10px;background:var(--sky-soft);border-bottom:2.5px solid var(--ink)}
-.tabs button{border:2px solid var(--ink);border-radius:12px;background:#fff;font:800 13px Nunito;padding:4px 10px;cursor:pointer}
+.tabs button{border:2px solid var(--ink);border-radius:12px;background:#fff;font:800 13px Nunito,"Noto Sans Devanagari","Noto Sans Bengali","Noto Sans Tamil","Noto Sans Telugu",sans-serif;padding:4px 10px;cursor:pointer}
 .tabs button[aria-pressed=true]{background:var(--ink);color:#fff}
 .note{font-size:13px;color:var(--ink2);font-weight:700}
 
