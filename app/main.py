@@ -208,6 +208,40 @@ def city(request: Request):
     return templates.TemplateResponse(request, "city.html", {"c": city_view()})
 
 
+@app.get("/app", response_class=HTMLResponse)
+def app_screen(request: Request):
+    """The installable app: chat, lost & found, more. Same engine as the website demo and WhatsApp."""
+    return templates.TemplateResponse(request, "app.html", {"posts": public_posts(), "wa_number": config.WA_DISPLAY_NUMBER})
+
+
+@app.get("/manifest.webmanifest")
+def manifest():
+    return JSONResponse({
+        "name": "StrayWatch", "short_name": "StrayWatch",
+        "description": "Look after community animals, get help fast when one is hurt, and find lost animals.",
+        "start_url": "/app", "scope": "/", "display": "standalone",
+        "background_color": "#FFF8EC", "theme_color": "#FFD23F",
+        "icons": [{"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+                  {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"},
+                  {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
+    }, media_type="application/manifest+json")
+
+
+SW = """const C='sw-v1';const SHELL=['/app','/static/style.css','/static/app.js','/static/favicon.svg'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)));self.skipWaiting();});
+self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch',e=>{const u=new URL(e.request.url);
+ if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;
+ e.respondWith(fetch(e.request).then(r=>{if(SHELL.includes(u.pathname)){const k=r.clone();caches.open(C).then(c=>c.put(e.request,k));}return r;})
+ .catch(()=>caches.match(e.request)));});"""
+
+
+@app.get("/sw.js")
+def service_worker():
+    """Lets the app install on a phone's home screen and open its shell offline. Chat itself needs the network."""
+    return Response(SW, media_type="application/javascript", headers={"Cache-Control": "no-cache"})
+
+
 @app.get("/lost/{code}", response_class=HTMLResponse)
 def poster(request: Request, code: str):
     with SessionLocal() as s:

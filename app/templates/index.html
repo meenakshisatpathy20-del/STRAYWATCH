@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>StrayWatch · every street friend, cared for</title>
-<meta name="description" content="Send one photo on WhatsApp. StrayWatch remembers the animals on your street, gets help fast when one is hurt, and helps find lost cows and dogs. Powered by the BharatCode model API.">
+<meta name="description" content="A free app for animal lovers: snap one photo and StrayWatch remembers the animals on your street, gets help fast when one is hurt, and helps find lost cows and dogs. Powered by the BharatCode model API.">
 <meta property="og:title" content="StrayWatch · every street friend, cared for">
 <meta property="og:description" content="Look after the community animals on your street, get help fast when one is hurt, and find lost cows and dogs, in your language.">
 <meta property="og:image" content="/static/welcome.png">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#FFD23F">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&family=Gochi+Hand&family=Noto+Sans+Bengali:wght@600&family=Noto+Sans+Devanagari:wght@600&family=Noto+Sans+Tamil:wght@600&family=Noto+Sans+Telugu:wght@600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
@@ -23,8 +25,7 @@
       <a href="#lost">Lost &amp; Found</a>
       <a href="#gap">Why StrayWatch</a>
       <a href="/city">City view</a>
-      {% if wa_number %}<a class="btn mint small" href="https://wa.me/{{ wa_number }}?text=hi">Open on WhatsApp</a>
-      {% else %}<a class="btn mint small" href="#try">Start now</a>{% endif %}
+      <a class="btn mint small" href="/app">Open the app</a>
     </nav>
   </div>
 </header>
@@ -35,15 +36,15 @@
     <div class="copy">
       <div class="hand" style="font-size:24px;color:var(--red)">hello, animal lover! {{ d.heart(22) }}</div>
       <h1>Every street friend, <span class="hl">known and cared for.</span></h1>
-      <p class="lead">Send one photo on WhatsApp. StrayWatch remembers the dogs and cows on your street, gets help in minutes when one is hurt, and helps lost animals find their way home.</p>
+      <p class="lead">Snap one photo. StrayWatch remembers the dogs and cows on your street, gets help in minutes when one is hurt, and helps lost animals find their way home.</p>
       <div style="display:flex;flex-wrap:wrap;gap:12px">
-        {% if wa_number %}<a class="btn sun big" href="https://wa.me/{{ wa_number }}?text=hi">Say hi on WhatsApp</a>{% endif %}
-        <a class="btn {{ 'big' if wa_number else 'sun big' }}" href="#try">Try it right here</a>
+        <a class="btn sun big" href="/app">Open the app</a>
+        <a class="btn big" href="#try">See the demo</a>
       </div>
       <div class="chips" aria-label="Languages">
         <span class="chip">English</span><span class="chip">हिंदी</span><span class="chip">বাংলা</span><span class="chip">தமிழ்</span><span class="chip">తెలుగు</span><span class="chip">मराठी</span>
       </div>
-      <div class="note">Free · no app to install · works on any phone with WhatsApp</div>
+      <div class="note">Free · works in any phone browser · add it to your home screen like an app · WhatsApp add-on {{ "available" if wa_number else "coming soon" }}</div>
     </div>
     <div class="art">
       <svg viewBox="0 0 400 320" fill="none" stroke="#2B2340" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="A happy dog, cow and cat drawn as doodles, with hearts">
@@ -71,7 +72,7 @@
 
 <section id="how">
   <div class="wrap">
-    <div class="section-title"><h2>Three things StrayWatch does</h2><span class="hand">all inside WhatsApp</span></div>
+    <div class="section-title"><h2>Three things StrayWatch does</h2><span class="hand">in one friendly app</span></div>
     <div class="grid3 how">
       <div class="card" style="box-shadow:5px 5px 0 var(--mint)">
         <div class="icon" style="background:var(--mint-soft)">{{ d.heart(32) }}</div>
@@ -112,7 +113,7 @@
       </table>
     </div>
     <div class="grid3" style="margin-top:20px">
-      <div class="promise"><div class="dot" style="background:var(--sun-soft)">{{ d.paw(22) }}</div><div><b>StrayWatch: where people already are</b><p>WhatsApp, in 6 languages, with a photo and a location. No form, no install, no English needed.</p></div></div>
+      <div class="promise"><div class="dot" style="background:var(--sun-soft)">{{ d.paw(22) }}</div><div><b>StrayWatch: easy when it matters</b><p>Opens in any phone browser in seconds, in 6 languages, with just a photo and a location. No form, no app store, no English needed. WhatsApp is an optional add-on.</p></div></div>
       <div class="promise"><div class="dot" style="background:var(--mint-soft)">{{ d.paw(22) }}</div><div><b>StrayWatch: knows the street</b><p>Animals have profiles and caretakers, so the person who cares most and lives closest hears first.</p></div></div>
       <div class="promise"><div class="dot" style="background:var(--coral-soft)">{{ d.paw(22) }}</div><div><b>StrayWatch: never drops a case</b><p>One helper at a time, 3 minutes each, then the next, and the reporter always knows what's happening.</p></div></div>
     </div>
@@ -123,7 +124,7 @@
   <div class="wrap">
     <div class="section-title"><h2>How a rescue works</h2><span class="hand">measured on our prototype</span></div>
     <ol class="flow">
-      <li><span class="n">1</span><b>Photo + location</b><p>Sent on WhatsApp, in any of 6 languages. At night, words are enough.</p></li>
+      <li><span class="n">1</span><b>Photo + location</b><p>From the app (or the WhatsApp add-on), in any of 6 languages. At night, words are enough.</p></li>
       <li><span class="n">2</span><b>AI reads the scene</b><p>Species, injury, urgency, on-road. The reporter's words override a calm-looking photo.</p><em>~2–3 s</em></li>
       <li><span class="n">3</span><b>Is it a known animal?</b><p>Compared with registered animals within 1 km in one contact sheet.</p><em>~1.2 s</em></li>
       <li><span class="n">4</span><b>Caretaker first</b><p>Then helpers within 8 km, nearest first, with photo, distance and safety card.</p><em>alert in ~6 s</em></li>
@@ -136,8 +137,8 @@
 
 <section id="try" style="background:rgba(255,233,168,.35);border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink)">
   <div class="wrap">
-    <div class="section-title"><h2>Try it right here</h2><span class="hand">same brain as the WhatsApp bot</span></div>
-    <p style="margin:-8px 0 14px;font-size:17px;color:var(--ink2)">Pick a sample photo (or upload your own) and chat like you would on WhatsApp. On the right you can watch every step the AI takes, and see the <b>caretaker's phone</b> light up.</p>
+    <div class="section-title"><h2>Try it right here</h2><span class="hand">a guided tour of the app</span></div>
+    <p style="margin:-8px 0 14px;font-size:17px;color:var(--ink2)">Pick a sample photo (or upload your own) and chat like you would in the app. On the right you can watch every step the AI takes, and see the <b>caretaker's phone</b> light up.</p>
     <div class="samples" role="group" aria-label="Sample scenarios">
       <button class="btn coral small" data-sample="sos">Hurt dog near Lalpur (SOS)</button>
       <button class="btn sun small" data-sample="register">Register a dog</button>
@@ -174,7 +175,7 @@
           </div>
           <div class="msgs short" id="helper"><div class="typing">Alerts for this demo helper will appear here…</div></div>
         </div>
-        <div class="note">Priya and Arjun are sample helpers so you can play both sides. Real helpers get these messages on WhatsApp.</div>
+        <div class="note">Priya and Arjun are sample helpers so you can play both sides. Real helpers get these alerts in the app, or on WhatsApp if they use the add-on.</div>
       </div>
     </div>
   </div>
