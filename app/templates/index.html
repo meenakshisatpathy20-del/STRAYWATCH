@@ -1,0 +1,196 @@
+{% import "_doodles.html" as d %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StrayWatch · every street friend, cared for</title>
+<meta name="description" content="Send one photo on WhatsApp. StrayWatch remembers the animals on your street, gets help fast when one is hurt, and helps find lost cows and dogs. Powered by the BharatCode model API.">
+<meta property="og:title" content="StrayWatch · every street friend, cared for">
+<meta property="og:description" content="Look after the community animals on your street, get help fast when one is hurt, and find lost cows and dogs, in your language.">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&family=Gochi+Hand&family=Noto+Sans+Bengali:wght@600&family=Noto+Sans+Devanagari:wght@600&family=Noto+Sans+Tamil:wght@600&family=Noto+Sans+Telugu:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="nav">
+  <div class="wrap">
+    <a class="logo" href="/">{{ d.dog(42) }}<span>StrayWatch</span></a>
+    <nav aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#try">Try it</a>
+      <a href="#lost">Lost &amp; Found</a>
+      <a href="#promise">Our promise</a>
+      {% if wa_number %}<a class="btn mint small" href="https://wa.me/{{ wa_number }}?text=hi">Open on WhatsApp</a>
+      {% else %}<a class="btn mint small" href="#try">Start now</a>{% endif %}
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap">
+  <div class="hero">
+    <div class="copy">
+      <div class="hand" style="font-size:24px;color:var(--red)">hello, animal lover! {{ d.heart(22) }}</div>
+      <h1>Every street friend, <span class="hl">known and cared for.</span></h1>
+      <p class="lead">Send one photo on WhatsApp. StrayWatch remembers the dogs and cows on your street, gets help in minutes when one is hurt, and helps lost animals find their way home.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        {% if wa_number %}<a class="btn sun big" href="https://wa.me/{{ wa_number }}?text=hi">Say hi on WhatsApp</a>{% endif %}
+        <a class="btn {{ 'big' if wa_number else 'sun big' }}" href="#try">Try it right here</a>
+      </div>
+      <div class="chips" aria-label="Languages">
+        <span class="chip">English</span><span class="chip">हिंदी</span><span class="chip">বাংলা</span><span class="chip">தமிழ்</span><span class="chip">తెలుగు</span><span class="chip">मराठी</span>
+      </div>
+      <div class="note">Free · no app to install · works on any phone with WhatsApp</div>
+    </div>
+    <div class="art">
+      <svg viewBox="0 0 400 320" fill="none" stroke="#2B2340" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="A happy dog, cow and cat drawn as doodles, with hearts">
+        <ellipse cx="200" cy="292" rx="170" ry="16" fill="#FFE9A8" stroke-width="2.5"/>
+        <g class="bob2"><g transform="translate(150 30) scale(2.7)"><path d="M20 17c-5-2-7-6-6-10M44 17c5-2 7-6 6-10"/><path d="M17 24c-6-1-10 2-10 5 3 2 8 1 11-1z" fill="#fff"/><path d="M47 24c6-1 10 2 10 5-3 2-8 1-11-1z" fill="#fff"/><path d="M18 20c0-5 6-8 14-8s14 3 14 8l-2 14H20z" fill="#fff"/><path d="M33 13c5 0 9 2 9 7-4 1-8-1-9-7z" fill="#2B2340"/><circle cx="26" cy="27" r="2" fill="#2B2340"/><circle cx="38" cy="27" r="2" fill="#2B2340"/><rect x="19" y="33" width="26" height="17" rx="8.5" fill="#FFB3C1"/><circle cx="27" cy="41" r="1.8" fill="#2B2340"/><circle cx="37" cy="41" r="1.8" fill="#2B2340"/></g></g>
+        <g class="bob"><g transform="translate(18 120) scale(2.3)"><path d="M18 22c-8 2-10 14-6 20 3 3 6 0 7-4" fill="#C98B5B"/><path d="M46 22c8 2 10 14 6 20-3 3-6 0-7-4" fill="#C98B5B"/><path d="M18 25c0-8 6-13 14-13s14 5 14 13v9c0 10-6 17-14 17S18 44 18 34z" fill="#F4B678"/><circle cx="26" cy="30" r="2" fill="#2B2340"/><circle cx="38" cy="30" r="2" fill="#2B2340"/><ellipse cx="32" cy="36.5" rx="3.6" ry="2.6" fill="#2B2340"/><path d="M28 41c2 2 6 2 8 0"/></g></g>
+        <g class="bob3"><g transform="translate(262 156) scale(1.8)"><path d="M16 26l-2-14 10 7M48 26l2-14-10 7" fill="#9AA7B8"/><path d="M14 30c0-9 8-14 18-14s18 5 18 14c0 11-8 18-18 18s-18-7-18-18z" fill="#B9C4D2"/><circle cx="25" cy="30" r="2" fill="#2B2340"/><circle cx="39" cy="30" r="2" fill="#2B2340"/><path d="M30 35l2 2 2-2M32 37c-1 3-4 3-5 2M32 37c1 3 4 3 5 2M10 34h9M10 39h9M45 34h9M45 39h9"/></g></g>
+        <path d="M118 40c-4-8-16-4-12 6l12 12 12-12c4-10-8-14-12-6z" fill="#FF8FA3" stroke-width="2.5"/>
+        <path d="M340 80c-3-6-12-3-9 4l9 9 9-9c3-7-6-10-9-4z" fill="#FF8FA3" stroke-width="2.5"/>
+        <path d="M58 70l4 10M52 76l16-2M350 220l3 8M346 225l12-1M250 20l3 8M246 25l12-1" stroke="#FFB020" stroke-width="3"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="ribbon" aria-label="StrayWatch so far">
+    <div class="stat"><b>{{ stats.animals }}</b><span>animals with a caretaker</span></div>
+    <div class="stat"><b>{{ stats.helpers }}</b><span>helpers on call</span></div>
+    {% if stats.checkins %}<div class="stat"><b>{{ stats.checkins }}</b><span>health check-ins</span></div>{% endif %}
+    {% if stats.cases %}<div class="stat"><b>{{ stats.helped }}/{{ stats.cases }}</b><span>SOS cases picked up{% if stats.median_accept_min is not none %} · median {{ stats.median_accept_min }} min{% endif %}</span></div>{% endif %}
+    <div class="stat"><b>{{ stats.found }}</b><span>lost animal{{ '' if stats.found == 1 else 's' }} back home</span></div>
+    <div class="stat"><b>6</b><span>languages</span></div>
+  </div>
+  <div class="note">Live counts from this pilot, including sample data in Ranchi.</div>
+</div>
+
+<section id="how">
+  <div class="wrap">
+    <div class="section-title"><h2>Three things StrayWatch does</h2><span class="hand">all inside WhatsApp</span></div>
+    <div class="grid3 how">
+      <div class="card" style="box-shadow:5px 5px 0 var(--mint)">
+        <div class="icon" style="background:var(--mint-soft)">{{ d.heart(32) }}</div>
+        <h3>My Animals</h3>
+        <p>For the feeders and caretakers who look after street dogs and cows every day.</p>
+        <ul><li>One photo makes a profile: colour, markings, ear notch</li><li>Daily photo: it recognises who it is and keeps a health diary</li><li>Spots changes like a new wound, and reminds you about rabies shots</li></ul>
+      </div>
+      <div class="card" style="box-shadow:5px 5px 0 var(--coral)">
+        <div class="icon" style="background:var(--coral-soft)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4" stroke="#C8322B"/><circle cx="12" cy="12" r="4" fill="#FF8A7A"/></svg></div>
+        <h3>Rescue SOS</h3>
+        <p>See a hurt animal? Send a photo and your location.</p>
+        <ul><li>AI checks how urgent it is, even from a Hinglish message</li><li>If it's a known animal, <b>its caretaker hears first</b></li><li>No reply in 3 minutes? It asks the next helper, by itself</li></ul>
+      </div>
+      <div class="card" style="box-shadow:5px 5px 0 var(--sky)">
+        <div class="icon" style="background:var(--sky-soft)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="#fff"/><path d="M15 15l5.5 5.5"/></svg></div>
+        <h3>Lost &amp; Found</h3>
+        <p>Lost your cow or dog? Post a photo.</p>
+        <ul><li>It searches every photo people sent nearby</li><li>Checks each new photo too, and pings you on a match</li><li>A shareable poster, without your number or exact spot</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="try" style="background:rgba(255,233,168,.35);border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink)">
+  <div class="wrap">
+    <div class="section-title"><h2>Try it right here</h2><span class="hand">same brain as the WhatsApp bot</span></div>
+    <p style="margin:-8px 0 14px;font-size:17px;color:var(--ink2)">Pick a sample photo (or upload your own) and chat like you would on WhatsApp. On the right you can watch every step the AI takes, and see the <b>caretaker's phone</b> light up.</p>
+    <div class="samples" role="group" aria-label="Sample scenarios">
+      <button class="btn coral small" data-sample="sos">Hurt dog near Lalpur (SOS)</button>
+      <button class="btn sun small" data-sample="register">Register a dog</button>
+      <button class="btn mint small" data-sample="checkin">Daily check-in for Bruno</button>
+      <button class="btn sky small" data-sample="lost">My cow is lost</button>
+      <button class="btn small" data-sample="reset">Start over</button>
+    </div>
+    <div class="try">
+      <div class="phone" aria-label="Your chat with StrayWatch">
+        <div class="phone-head"><div class="av">{{ d.dog(32) }}</div><div><b>StrayWatch</b><small>your chat</small></div></div>
+        <div class="msgs" id="msgs" aria-live="polite"></div>
+        <form class="composer" id="composer">
+          <label class="icon-btn" title="Send a photo"><span class="sr">Send a photo</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            <input type="file" id="file" accept="image/*" hidden>
+          </label>
+          <button type="button" class="icon-btn loc" id="locbtn" title="Share location" aria-label="Share location">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#FF8A7A" stroke="#2B2340" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5" fill="#fff"/></svg>
+          </button>
+          <label for="text" class="sr">Message</label>
+          <input type="text" id="text" placeholder="Type a message, any language…" autocomplete="off">
+          <button class="icon-btn" aria-label="Send" style="background:var(--sun)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </form>
+      </div>
+      <div class="side">
+        <div class="trace" aria-live="polite">
+          <h3>What StrayWatch is doing</h3>
+          <ol id="trace"><li class="empty">Every AI step and decision shows up here, with the model used and how long it took.</li></ol>
+        </div>
+        <div class="phone" aria-label="Demo helper phones">
+          <div class="tabs" role="group" aria-label="Whose phone">
+            <button aria-pressed="true" data-as="demo:priya">Priya · caretaker (हिंदी)</button>
+            <button aria-pressed="false" data-as="demo:arjun">Arjun · helper</button>
+          </div>
+          <div class="msgs short" id="helper"><div class="typing">Alerts for this demo helper will appear here…</div></div>
+        </div>
+        <div class="note">Priya and Arjun are sample helpers so you can play both sides. Real helpers get these messages on WhatsApp.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="lost">
+  <div class="wrap">
+    <div class="section-title"><h2>Help them get home</h2><span class="hand">recognise anyone?</span></div>
+    <div class="grid3 board">
+      {% for p in posts %}
+      <article class="card post" style="box-shadow:4px 4px 0 {{ 'var(--mint)' if p.status=='found' else 'var(--ink)' }}">
+        <div class="pic" role="img" aria-label="Photo of {{ p.name }}" style="background-image:url('{{ p.photo }}')"></div>
+        <div class="row"><h3>{{ p.name }} · {{ p.species }}</h3><span class="tag {{ 'found' if p.status=='found' else 'lost' }}">{{ 'HOME!' if p.status=='found' else 'LOST' }}</span></div>
+        {% if p.status=='found' %}<p>Back home after {{ p.found_hours }} hours, thanks to a neighbour's photo. 💛</p>
+        {% else %}<p>{{ p.looks or 'See photo' }} · last seen {{ p.area }} · {{ p.when }}</p>
+        <a class="btn sun small" href="/lost/{{ p.code }}">I've seen {{ p.name }}</a>{% endif %}
+      </article>
+      {% else %}
+      <p>No lost animals right now. 💛</p>
+      {% endfor %}
+    </div>
+    <p class="note" style="margin-top:12px">Posters show an area, never an exact spot. Owners are contacted through StrayWatch, never by phone number.</p>
+  </div>
+</section>
+
+<section id="promise" style="padding-top:10px">
+  <div class="wrap">
+    <div class="section-title"><h2>Our promise to animals and people</h2></div>
+    <div class="grid3">
+      <div class="promise"><div class="dot">{{ d.paw(22) }}</div><div><b>The AI chooses, it never invents first aid</b><p>Safety tips come only from reviewed cards based on People For Animals, Humane World for Animals, Blue Cross and WHO, with sources shown.</p></div></div>
+      <div class="promise"><div class="dot" style="background:var(--sky-soft)">{{ d.paw(22) }}</div><div><b>Private by default</b><p>No phone numbers are shared. Public posters show only an area. Photos are stripped of hidden location data.</p></div></div>
+      <div class="promise"><div class="dot" style="background:var(--coral-soft)">{{ d.paw(22) }}</div><div><b>For animals, never against them</b><p>There is no "remove this dog" button. StrayWatch follows India's Animal Birth Control Rules: care, vaccinate, sterilise.</p></div></div>
+      <div class="promise"><div class="dot" style="background:var(--sun-soft)">{{ d.paw(22) }}</div><div><b>Humans confirm, AI assists</b><p>When it's unsure who an animal is, it asks. It only acts on its own when it's very sure (90%+).</p></div></div>
+      <div class="promise"><div class="dot">{{ d.paw(22) }}</div><div><b>Helpers are protected too</b><p>Alerts only within {{ 8 }} km, at most 6 a day, and "pause" any time. Fake photos with no animal are stopped.</p></div></div>
+      <div class="promise"><div class="dot" style="background:var(--sky-soft)">{{ d.paw(22) }}</div><div><b>Not an emergency service</b><p>StrayWatch helps people help animals. If a person is hurt, call 112.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-title"><h2>Why this matters</h2></div>
+    <div class="grid3 stats3">
+      <div class="card"><b>1.53 crore</b><p>street dogs and about 50 lakh stray cattle live on India's streets.</p><a href="https://pib.gov.in/PressReleasePage.aspx?PRID=1813802">20th Livestock Census, 2019 (PIB)</a></div>
+      <div class="card"><b>37 lakh</b><p>dog-bite cases were reported in 2024. Known, vaccinated, cared-for dogs are safer for everyone.</p><a href="https://www.dailyexcelsior.com/?p=2029854">NCDC data, Lok Sabha reply</a></div>
+      <div class="card"><b>69% · 21%</b><p>of road-crash cases involving stray animals at one trauma centre were dogs and cattle.</p><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8054802">J Emerg Trauma Shock, 2021</a></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>Made with 💛 in Ranchi. StrayWatch helps people help animals; it does not replace a vet or emergency services.</div>
+    <div><b>AI by the BharatCode model API</b> · <a href="https://github.com/meenakshisatpathy20-del/straywatch">Source on GitHub</a></div>
+  </div>
+</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>
