@@ -8,7 +8,7 @@ dogs and cows, powered by the **BharatCode model API**.
 > Send one photo. StrayWatch remembers the animals on your street, gets help in minutes when one is hurt, and helps
 > lost cows and dogs find their way home, in English, हिंदी, বাংলা, தமிழ், తెలుగు or मराठी.
 
-🌐 **Live demo:** _add your Render URL here_ · 💬 **WhatsApp:** _add your bot number here_ · 🧪 `9 tests passing`
+🌐 **Live demo:** _add your Render URL here_ · 💬 **WhatsApp:** _add your bot number here_ · 🧪 `11 tests passing`
 
 ---
 
@@ -37,7 +37,23 @@ makes rescue fast and lost animals findable.
 | 🔎 **Lost & Found** | Cattle and dog owners | Post a photo → the AI **searches every photo people sent nearby**, checks each new one against open posters, and pings the owner on a match. A shareable public poster never shows the owner's number or exact spot. |
 
 Everything runs inside **WhatsApp** (no app to install), and the **website** has the same assistant for anyone to try,
-with a live view of every AI step and a second phone showing the caretaker's side.
+with a live view of every AI step and a second phone showing the caretaker's side. A **City view** turns the same data
+into where NGOs and municipalities should act: vaccination and sterilisation coverage, response times, and cattle
+hotspots on roads.
+
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Homepage](docs/screenshots/1-home.jpg) | ![Try it: SOS, caretaker alerted in Hindi](docs/screenshots/4-try-it-sos-caretaker-hindi.jpg) |
+| **Homepage** | **Try it:** a Hinglish SOS; the caretaker's phone gets the alert in Hindi, and every AI step is shown |
+| ![Why StrayWatch](docs/screenshots/2-why-straywatch.jpg) | ![How a rescue works](docs/screenshots/3-how-a-rescue-works.jpg) |
+| **Why today's options fall short** | **How a rescue works**, with measured timings |
+| ![Lost & Found board](docs/screenshots/5-lost-and-found.jpg) | ![City view](docs/screenshots/6-city-view.jpg) |
+| **Lost & Found board** | **City view** for NGOs and municipalities |
+
+<p align="center"><img src="docs/screenshots/7-lost-poster-mobile.jpg" alt="Public lost poster on a phone" width="300"><br><b>Shareable lost poster</b> (no phone number, no exact spot)</p>
 
 ## How we used the BharatCode model API
 
@@ -116,7 +132,7 @@ flowchart LR
 pip install -r requirements.txt
 export ADAPTION_API_KEY=pt_live_...        # BharatCode / Adaption console → Settings → API keys
 uvicorn app.main:app --reload              # http://localhost:8000
-python -m pytest -q tests                  # 9 offline tests (stand-in AI)
+python -m pytest -q tests                  # 11 offline tests (stand-in AI)
 ```
 Demo mode (on by default) seeds sample caretakers, animals and posters around Ranchi so the website works right away.
 
