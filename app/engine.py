@@ -376,7 +376,8 @@ def create_case(s, u: User, d: dict) -> list[Out]:
     step(s, u.id, "Planned who to ask", f"{len(caretakers)} caretaker(s) first, then {len(helpers)} nearby helper(s). "
                                         f"Each gets {wait_words()} to reply.")
     if d.get("photo"):
-        add_sighting(s, u.id, d["photo"], desc, lat, lon, "sos")
+        # A recognised registered animal is not someone's lost pet: don't send its photo to lost-poster matching.
+        add_sighting(s, u.id, d["photo"], desc, lat, lon, "sos", check=animal is None)
 
     urg = {"high": "URGENT", "medium": "Needs help soon", "low": "Not urgent", "none": "Not urgent"}[desc["urgency"]]
     intro = f"*Case SW-{case.id} · {urg}*\n{desc['summary']}"
@@ -458,7 +459,7 @@ def alert_next(s, case: Case) -> list[Out]:
         return [Out(hid, f"{head}\nCase SW-{case.id}: {tri.get('summary', '')}\nWhere: {where}\n"
                          f"If you can't reply in {wait_words()}, I'll ask the next helper.",
                     image_url=photo_url(case.photo_id),
-                    buttons=[(f"case:go:{case.id}", "I'm going"), (f"case:no:{case.id}", "Can't go")])]
+                    buttons=[(f"case:go:{case.id}", "On my way"), (f"case:no:{case.id}", "Can't make it")])]
     case.queue, case.current_helper = [], None
     if case.status == "alerting":
         case.status = "unanswered"
@@ -677,7 +678,7 @@ def checkin_log(s, u: User, animal_id: int, d: dict) -> list[Out]:
     s.add(CheckIn(animal_id=a.id, user_id=u.id, photo_id=d["photo"], note=h["note"], concern=h["changed"]))
     lat, lon = d.get("lat") or a.lat, d.get("lon") or a.lon
     if lat:
-        add_sighting(s, u.id, d["photo"], a.profile, lat, lon, "checkin")
+        add_sighting(s, u.id, d["photo"], a.profile, lat, lon, "checkin", check=False)  # a known, cared-for animal
     days = s.scalar(select(func.count()).select_from(CheckIn).where(CheckIn.animal_id == a.id))
     outs = []
     if h["changed"]:

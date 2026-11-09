@@ -299,6 +299,7 @@ LANGS = {
 
 TRANSLATE_INSTRUCTIONS = """Translate the message for a WhatsApp chat in India into {lang}.
 Use simple, warm, everyday words that an older person would understand (not formal or bookish).
+Never assume the reader's gender: prefer gender-neutral phrasing.
 Keep names, numbers, links, case codes like SW-12 or LF-3 and *bold markers* exactly as they are.
 Keep line breaks. Reply with the translation only."""
 
@@ -326,7 +327,8 @@ def translate(s, text: str, lang: str | None, user_id: str | None = None) -> str
 
 
 BATCH_INSTRUCTIONS = """Translate each string in the JSON list into {lang} for a WhatsApp chat in India.
-Use simple, warm, everyday words an older person would understand. Keep names, numbers, links, codes like SW-12 or
+Use simple, warm, everyday words an older person would understand. Never assume the reader's gender: prefer
+gender-neutral phrasing (e.g. Hindi "रास्ते में हूँ" rather than "जा रहा हूँ"). Keep names, numbers, links, codes like SW-12 or
 LF-1234, emojis and *bold markers* exactly as they are. Keep line breaks. Short button labels must stay short
 (under 20 characters). Reply with ONLY a JSON object: {{"t": ["translation 1", "translation 2", ...]}} with the same
 number of items in the same order."""

@@ -1,0 +1,32 @@
+Project: StrayWatch
+Tagline: Every street friend, known and cared for.
+Hackathon: BharatCode Build League
+Category: Chatbots & communities / Everyday assistance (AI agent on WhatsApp)
+
+What it does
+------------
+StrayWatch is a WhatsApp assistant (plus a website) for the people who look after India's community animals.
+- My Animals: caretakers register the street dogs and cows they feed with one photo. A daily photo is recognised
+  as the right animal, logged in a health diary, compared with the last photo for visible changes, and vaccine
+  reminders follow.
+- Rescue SOS: anyone can send a photo (or words, at night) and a location. The AI triages the case, recognises
+  whether it is a registered animal, alerts that animal's caretaker first, then the nearest volunteers, and moves
+  on by itself if nobody answers in 3 minutes. Safety-first first-aid cards with sources go to the reporter.
+- Lost & Found: owners post a lost cow or dog; the AI searches every photo people sent nearby, checks each new
+  photo against open posters, and gives a public poster that never shows the owner's number or exact spot.
+- Everything works in English, Hindi, Bengali, Tamil, Telugu and Marathi.
+
+How the BharatCode model API is used
+------------------------------------
+All model calls go through the BharatCode (Adaption) Responses API with the official `adaption` Python SDK
+(see app/ai.py). Hosted models used:
+- qwen3.5-397b (vision): reading animal photos and Hinglish/Indian-language messages into a validated triage
+  record; comparing a new photo with a labelled contact sheet of nearby animals to recognise individuals and to
+  match lost animals; batch translation of every reply into the user's language.
+- gemma-4-31b-it (vision): health comparison between a check-in photo and the previous one; intent detection.
+Design rule: the model reads and compares; plain code decides and enforces (helper radius, escalation timers,
+privacy, confidence thresholds). Every model call is timed and shown in a live trace on the website.
+
+Repository: https://github.com/meenakshisatpathy20-del/straywatch
+Run: see README.md (pip install -r requirements.txt; uvicorn app.main:app)
+Built by: meenakshisatpathy20-del, Ranchi

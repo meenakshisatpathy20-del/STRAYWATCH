@@ -84,6 +84,17 @@ def _post(payload: dict) -> bool:
         return False
 
 
+def send_alert_template(phone: str, summary: str) -> bool:
+    """Outside WhatsApp's 24-hour window a business may only start a chat with an approved template.
+    Template (create in WhatsApp Manager, category Utility), one body variable:
+    'An animal near you needs help: {{1}}. Reply to this message to see the case.'"""
+    if not config.WA_ALERT_TEMPLATE:
+        return False
+    return _post({"to": phone, "type": "template", "template": {
+        "name": config.WA_ALERT_TEMPLATE, "language": {"code": config.WA_TEMPLATE_LANG},
+        "components": [{"type": "body", "parameters": [{"type": "text", "text": summary[:200]}]}]}})
+
+
 def send(phone: str, o: Out) -> bool:
     """One engine message -> one or two WhatsApp messages (image first, then text with buttons)."""
     text = o.text + (f"\n{o.link}" if o.link else "")
