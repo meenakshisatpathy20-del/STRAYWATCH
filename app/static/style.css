@@ -123,3 +123,12 @@ footer{border-top:2.5px dashed var(--ink);padding:22px 0 40px;font-size:14px;col
 footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
 .paws{position:absolute;opacity:.18;pointer-events:none}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* phones: compact header that doesn't eat the screen */
+@media (max-width:700px){
+  .nav{position:static}
+  .nav nav a:not(.btn){display:none}
+  .logo span{font-size:22px}
+  .hero{padding-top:28px}
+  .msgs{height:460px}
+}
