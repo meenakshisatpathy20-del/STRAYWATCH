@@ -202,7 +202,25 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
     if b == "l:board":
         return [Out(u.id, "All lost posters near you:", link=f"{config.PUBLIC_BASE_URL}/#lost")]
 
-    # 3. Flow steps.
+    # 3. Changed their mind mid-chat? An emergency always interrupts, and text that a step isn't waiting for is
+    #    checked for a new intent (e.g. "meri billi kho gayi" while reporting a sighting).
+    if flow and text and not photo_id and not b:
+        expects_text = (flow == "sos" or (flow in ("register", "lost") and st.get("d", {}).get("photo")
+                                          and (not st["d"].get("name") or (flow == "lost" and not st["d"].get("when")))))
+        urgent = flow != "sos" and re.search(INJURY_WORDS, text.lower())
+        if urgent or not expects_text:
+            it = ai.intent(s, u.id, text)
+            target = {"sos": "m:sos", "lost": "l:lost", "register": "a:register", "checkin": "a:checkin",
+                      "seen": "l:seen", "menu": "menu"}.get(it["intent"])
+            if target and not (target == "l:seen" and flow == "seen") and not (target == "l:lost" and flow == "lost"):
+                step(s, u.id, "Changed topic", f"was '{flow}', now '{it['intent']}'")
+                u.state = {}
+                if target == "m:sos":
+                    u.state = {"flow": "sos", "d": {"text": text}}
+                    return sos_step(s, u, "", None, "")
+                return handle(s, user_id, Incoming(button=target))
+
+    # 4. Flow steps.
     if flow == "sos":
         return sos_step(s, u, text, photo_id, b)
     if flow == "register":
@@ -216,7 +234,7 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
     if flow == "photo_choice":
         return photo_choice(s, u, b)
 
-    # 4. No flow: a photo on its own, or free text.
+    # 5. No flow: a photo on its own, or free text.
     if photo_id:
         return photo_router(s, u, photo_id, text)
     if inc.lat is not None:

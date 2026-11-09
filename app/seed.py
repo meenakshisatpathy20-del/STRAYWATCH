@@ -87,9 +87,10 @@ def seed():
         s.add(Sighting(user_id="demo:sunita", photo_id=ph("cow_7.jpg"), species="cow",
                        profile={"species": "cow", "colour": "white"}, lat=RATU_RD[0] + 0.012, lon=RATU_RD[1] + 0.008,
                        source="seen", created=now() - timedelta(hours=20)))
-        for f, dlat in (("cow_3.jpg", 0.02), ("cow_5.jpg", -0.015), ("cow_6.jpg", 0.03)):
-            s.add(Sighting(user_id="demo:sunita", photo_id=ph(f), species="cow", profile={"species": "cow"},
-                           lat=RATU_RD[0] + dlat, lon=RATU_RD[1], source="seen", created=now() - timedelta(hours=30)))
+        # Sample: cattle repeatedly reported on Ratu Road, so the City view shows a hotspot.
+        for f, dlat, hrs in (("cow_3.jpg", 0.001, 30), ("cow_5.jpg", -0.001, 54), ("cow_6.jpg", 0.002, 78)):
+            s.add(Sighting(user_id="demo:sunita", photo_id=ph(f), species="cow", profile={"species": "cow", "on_road": True},
+                           lat=RATU_RD[0] + dlat, lon=RATU_RD[1] + 0.001, source="seen", created=now() - timedelta(hours=hrs)))
 
         s.add(LostPost(code="LF-1001", owner_id="demo:ramesh", name="Gauri", species="cow", photo_id=ph("cow_4.jpg"),
                        profile={"species": "cow", "colour": "white", "markings": "curved horns", "ear_tag": True},

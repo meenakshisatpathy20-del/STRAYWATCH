@@ -1,0 +1,64 @@
+{% import "_doodles.html" as d %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>City view · StrayWatch</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&family=Gochi+Hand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="nav"><div class="wrap">
+  <a class="logo" href="/">{{ d.dog(42) }}<span>StrayWatch</span></a>
+  <nav aria-label="Main"><a href="/">Home</a><a href="/#try">Try it</a><a class="btn mint small" href="/#lost">Lost &amp; Found</a></nav>
+</div></header>
+<main class="wrap" style="padding-top:36px;padding-bottom:40px;display:flex;flex-direction:column;gap:28px">
+  <div>
+    <div class="hand" style="font-size:22px;color:var(--red)">for NGOs &amp; municipalities</div>
+    <h1 style="font-size:clamp(34px,5vw,52px)">City view</h1>
+    <p style="font-size:18px;color:var(--ink2);margin:6px 0 0;max-width:760px">The same everyday care data, turned into where to act: vaccination and sterilisation coverage, how fast rescues are picked up, and the areas that need attention. Areas are about 1 km wide; no individual animal or person is located here.</p>
+  </div>
+
+  <div class="kpis">
+    <div class="stat"><b>{{ c.animals }}</b><span>community animals with a caretaker ({{ c.dogs }} dog{{ '' if c.dogs==1 else 's' }} · {{ c.cows }} cow{{ '' if c.cows==1 else 's' }} · {{ c.cats }} cat{{ '' if c.cats==1 else 's' }})</span></div>
+    <div class="stat"><b>{{ c.vax_pct }}%</b><span>rabies-vaccinated in the last year ({{ c.vax }}/{{ c.vax_base }})</span><div class="bar"><i style="width:{{ c.vax_pct }}%"></i></div></div>
+    <div class="stat"><b>{{ c.notch_pct }}%</b><span>dogs with a sterilisation ear-notch seen in photos ({{ c.notched }}/{{ c.dogs }})</span><div class="bar"><i style="width:{{ c.notch_pct }}%;background:var(--sky)"></i></div></div>
+    <div class="stat"><b>{{ c.checkins_7d }}</b><span>health check-ins in the last 7 days</span></div>
+    <div class="stat"><b>{{ c.assigned }}/{{ c.cases }}</b><span>SOS cases picked up{% if c.median_accept is not none %} · median {{ c.median_accept }} min{% endif %}{% if c.unanswered %} · {{ c.unanswered }} unanswered{% endif %}</span></div>
+    <div class="stat"><b>{{ c.found }}/{{ c.lost }}</b><span>lost animals back home{% if c.median_found_h is not none %} · median {{ c.median_found_h }} h{% endif %}</span></div>
+    <div class="stat"><b>{{ c.helpers }}</b><span>volunteer helpers on call</span></div>
+  </div>
+
+  <section style="padding:0">
+    <div class="section-title"><h2>Where to act</h2><span class="hand">simple rules, not guesses</span></div>
+    {% if c.actions %}
+    <div class="grid3">
+      {% for kind, cell, why in c.actions %}
+      <div class="card" style="box-shadow:4px 4px 0 {{ 'var(--coral)' if kind=='Cattle on road' else ('var(--mint)' if kind=='Vaccination drive' else 'var(--sky)') }}">
+        <span class="tag">{{ kind }}</span>
+        <p style="margin:10px 0 6px;font-size:16px">{{ why }}</p>
+        <a href="{{ cell.map }}" target="_blank" rel="noopener" style="font-weight:800">Area around {{ cell.area }}</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="note">Nothing needs action yet. Suggestions appear when an area crosses a threshold: 2+ cattle-on-road reports, 2+ unvaccinated known animals, or 2+ SOS cases in 30 days.</p>{% endif %}
+  </section>
+
+  <section style="padding:0">
+    <div class="section-title"><h2>Busiest areas (last 30 days)</h2></div>
+    <div class="tablebox card" style="padding:0">
+      <table class="cmp">
+        <thead><tr><th>Area (~1 km)</th><th>Sightings</th><th>Cattle on road</th><th>SOS</th><th>Unvaccinated known animals</th></tr></thead>
+        <tbody>
+        {% for h in c.hot %}<tr><td><a href="{{ h.map }}" target="_blank" rel="noopener">{{ h.area }}</a></td><td>{{ h.sightings }}</td><td>{{ h.cattle_road }}</td><td>{{ h.sos }}</td><td>{{ h.unvaccinated }}</td></tr>
+        {% else %}<tr><td colspan="5">No activity yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:10px">Pilot data from Ranchi, including sample data. Counts update live as people use StrayWatch.</p>
+  </section>
+</main>
+</body>
+</html>

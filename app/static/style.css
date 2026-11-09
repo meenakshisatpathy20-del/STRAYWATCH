@@ -132,3 +132,22 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
   .hero{padding-top:28px}
   .msgs{height:460px}
 }
+
+/* gap table + flow */
+.tablebox{overflow-x:auto}
+table.cmp{width:100%;border-collapse:collapse;font-size:15px}
+table.cmp th{background:var(--sun);text-align:left;padding:12px 16px;border-bottom:2.5px solid var(--ink);font-family:"Baloo 2";font-size:18px}
+table.cmp td{padding:12px 16px;border-bottom:2px dashed var(--dot);vertical-align:top}
+table.cmp tr:last-child td{border-bottom:0}
+table.cmp td:first-child{white-space:nowrap}
+@media (max-width:700px){table.cmp td:first-child{white-space:normal;min-width:120px}}
+ol.flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px}
+ol.flow li{position:relative;background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:3px 3px 0 var(--ink);padding:14px 12px 12px}
+ol.flow li .n{display:inline-flex;width:30px;height:30px;border-radius:15px;border:2.5px solid var(--ink);background:var(--sun);align-items:center;justify-content:center;font-weight:800;margin-bottom:6px}
+ol.flow li b{display:block;font-family:"Baloo 2";font-size:18px;line-height:1.15}
+ol.flow li p{margin:4px 0 0;font-size:14px;color:var(--ink2)}
+ol.flow li em{display:inline-block;margin-top:8px;font-style:normal;font-size:12px;font-weight:800;background:var(--mint-soft);border:2px solid var(--ink);border-radius:10px;padding:0 8px}
+/* city */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.bar{height:14px;border:2px solid var(--ink);border-radius:8px;background:#fff;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--mint)}

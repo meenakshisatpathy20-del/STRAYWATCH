@@ -156,3 +156,20 @@ def test_helper_daily_cap(s, monkeypatch):
 
 def test_parse_json_handles_fences_and_chatter():
     assert ai.parse_json('Sure!\n```json\n{"a": {"b": 1}}\n```') == {"a": {"b": 1}}
+
+
+def test_change_of_mind_mid_flow(s, monkeypatch):
+    monkeypatch.setattr(ai, "intent", lambda s_, u, t: {"intent": "lost", "name": None, "via": "test"})
+    talk(s, "web:u", button="lang:en")
+    talk(s, "web:u", button="l:seen")
+    out = talk(s, "web:u", text="meri billi kho gayi hai")
+    assert "Let's find them together" in texts(out)
+
+
+def test_emergency_interrupts_other_flows(s, monkeypatch):
+    monkeypatch.setattr(ai, "intent", lambda s_, u, t: {"intent": "sos", "name": None, "via": "test"})
+    talk(s, "web:u", button="lang:en")
+    talk(s, "web:u", button="a:checkin")
+    out = talk(s, "web:u", text="ek kutta ghayal hai yahan")
+    assert "location" in texts(out).lower()
+    assert s.get(User, "web:u").state.get("flow") == "sos"

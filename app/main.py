@@ -142,6 +142,72 @@ def home(request: Request):
                                                               "wa_number": config.WA_DISPLAY_NUMBER})
 
 
+def city_view() -> dict:
+    """Aggregates for NGOs and municipalities. Areas are ~1 km grid cells; no individual locations are shown."""
+    from datetime import date, timedelta as td
+    from .db import now as _now
+    with SessionLocal() as s:
+        animals = [a for a in s.scalars(select(Animal)) if a.status == "active"]
+        dogs = [a for a in animals if a.species == "dog"]
+
+        def vaccinated(a):
+            v = a.rabies_vaccinated_on or ""
+            return v[:4].isdigit() and (date.today() - date.fromisoformat(v)).days <= 365
+        vax = sum(1 for a in animals if a.species in ("dog", "cat") and vaccinated(a))
+        vax_base = sum(1 for a in animals if a.species in ("dog", "cat"))
+        notched = sum(1 for a in dogs if (a.profile or {}).get("ear_notch"))
+        cases = list(s.scalars(select(Case)))
+        acc = sorted((c.accepted_at - c.created).total_seconds() / 60 for c in cases if c.accepted_at)
+        posts = list(s.scalars(select(LostPost)))
+        found = sorted((p.found_at - p.created).total_seconds() / 3600 for p in posts if p.found_at)
+        since = _now() - td(days=30)
+        cells: dict[tuple, dict] = {}
+
+        def cell(lat, lon):
+            k = (round(lat, 2), round(lon, 2))
+            return cells.setdefault(k, {"area": f"{k[0]:.2f}, {k[1]:.2f}", "sightings": 0, "cattle_road": 0, "sos": 0,
+                                        "unvaccinated": 0, "map": f"https://maps.google.com/?q={k[0]},{k[1]}"})
+        for x in s.scalars(select(Sighting).where(Sighting.created >= since)):
+            c = cell(x.lat, x.lon)
+            c["sightings"] += 1
+            if x.species in ("cow", "buffalo") and (x.profile or {}).get("on_road"):
+                c["cattle_road"] += 1
+        for c in cases:
+            if c.created >= since:
+                cell(c.lat, c.lon)["sos"] += 1
+        for a in animals:
+            if a.lat and a.species in ("dog", "cat") and not vaccinated(a):
+                cell(a.lat, a.lon)["unvaccinated"] += 1
+        actions = []
+        for c in cells.values():
+            if c["cattle_road"] >= 2:
+                actions.append(("Cattle on road", c, f"{c['cattle_road']} cattle-on-road reports: signage, reflective collars, owner outreach"))
+            if c["unvaccinated"] >= 2:
+                actions.append(("Vaccination drive", c, f"{c['unvaccinated']} known animals not vaccinated in the last year"))
+            if c["sos"] >= 2:
+                actions.append(("Rescue hotspot", c, f"{c['sos']} SOS cases in 30 days: ask for more helpers here"))
+        hot = sorted(cells.values(), key=lambda c: (c["sos"] * 3 + c["cattle_road"] * 2 + c["sightings"]), reverse=True)[:6]
+        return {
+            "animals": len(animals), "dogs": len(dogs), "cows": sum(1 for a in animals if a.species == "cow"),
+            "cats": sum(1 for a in animals if a.species == "cat"),
+            "vax_pct": round(100 * vax / vax_base) if vax_base else 0, "vax": vax, "vax_base": vax_base,
+            "notch_pct": round(100 * notched / len(dogs)) if dogs else 0, "notched": notched,
+            "checkins_7d": s.scalar(select(func.count()).select_from(CheckIn).where(CheckIn.created >= _now() - td(days=7))) or 0,
+            "cases": len(cases), "closed": sum(1 for c in cases if c.status == "closed"),
+            "assigned": sum(1 for c in cases if c.status in ("assigned", "closed")),
+            "unanswered": sum(1 for c in cases if c.status == "unanswered"),
+            "median_accept": round(acc[len(acc) // 2], 1) if acc else None,
+            "lost": len(posts), "found": len(found), "median_found_h": round(found[len(found) // 2]) if found else None,
+            "helpers": s.scalar(select(func.count()).select_from(User).where(User.is_volunteer.is_(True))) or 0,
+            "hot": hot, "actions": actions,
+        }
+
+
+@app.get("/city", response_class=HTMLResponse)
+def city(request: Request):
+    return templates.TemplateResponse(request, "city.html", {"c": city_view()})
+
+
 @app.get("/lost/{code}", response_class=HTMLResponse)
 def poster(request: Request, code: str):
     with SessionLocal() as s:
