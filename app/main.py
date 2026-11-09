@@ -6,6 +6,7 @@ import logging
 import secrets
 import threading
 from collections import OrderedDict
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
@@ -21,7 +22,18 @@ from .db import Animal, Case, CheckIn, LostPost, Outbox, Photo, SessionLocal, Si
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("straywatch")
 HERE = Path(__file__).resolve().parent
-app = FastAPI(title="StrayWatch")
+@asynccontextmanager
+async def lifespan(_app):
+    init_db()
+    if config.DEMO_MODE:
+        from .seed import seed
+        await asyncio.to_thread(seed)
+    task = asyncio.create_task(escalation_loop())
+    yield
+    task.cancel()
+
+
+app = FastAPI(title="StrayWatch", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
 _lock = threading.Lock()  # one conversation step at a time keeps SQLite happy and state consistent
@@ -39,10 +51,25 @@ def deliver(s, outs: list[engine.Out], viewer: str | None = None) -> list[dict]:
         if o.to == viewer:
             mine.append(o.as_dict())
         elif o.to.startswith("wa:") and whatsapp.enabled():
-            whatsapp.send(o.to[3:], o)
+            if not whatsapp.send(o.to[3:], o):
+                _undelivered(s, o)
         else:
             s.add(Outbox(user_id=o.to, payload=o.as_dict()))
     return mine
+
+
+def _undelivered(s, o: engine.Out):
+    """A rescue alert that WhatsApp refused (e.g. helper outside the 24-hour window): try the approved template,
+    and don't let the rescue wait 3 minutes for someone who never got the message."""
+    cid = next((b[0].split(":")[2] for b in o.buttons if b[0].startswith("case:go:")), None)
+    if not cid:
+        return
+    if whatsapp.send_alert_template(o.to[3:], o.text.split("\n")[1] if "\n" in o.text else o.text):
+        return
+    c = s.get(Case, int(cid))
+    if c and c.status == "alerting" and c.current_helper == o.to:
+        c.alerted_at = c.alerted_at.replace(year=2000)  # escalation loop moves on at the next tick (<= 20 s)
+        s.add(Trace(user_id=c.reporter_id, step="Alert not delivered", detail=f"SW-{c.id}: skipping to the next helper"))
 
 
 def run_turn(user_id: str, inc: engine.Incoming, viewer: str | None) -> list[dict]:
@@ -75,15 +102,6 @@ def _escalate_once():
         if outs:
             deliver(s, outs)
         s.commit()
-
-
-@app.on_event("startup")
-async def startup():
-    init_db()
-    if config.DEMO_MODE:
-        from .seed import seed
-        await asyncio.to_thread(seed)
-    asyncio.create_task(escalation_loop())
 
 
 # ------------------------------------------------------------------ pages

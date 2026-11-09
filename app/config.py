@@ -20,6 +20,8 @@ WA_PHONE_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
 WA_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "straywatch-verify")
 WA_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")  # optional: checks webhook signatures
 WA_DISPLAY_NUMBER = os.environ.get("WHATSAPP_DISPLAY_NUMBER", "")  # e.g. 919800000000, for wa.me links
+WA_ALERT_TEMPLATE = os.environ.get("WHATSAPP_ALERT_TEMPLATE", "")  # approved template for alerts outside 24 h
+WA_TEMPLATE_LANG = os.environ.get("WHATSAPP_TEMPLATE_LANG", "en")
 GRAPH = "https://graph.facebook.com/v21.0"
 
 # Rescue rules

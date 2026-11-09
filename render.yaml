@@ -1,0 +1,30 @@
+# One-click deploy on Render: New + -> Blueprint -> pick this repo.
+services:
+  - type: web
+    name: straywatch
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: ADAPTION_API_KEY
+        sync: false
+      - key: DATABASE_URL        # Neon/Postgres URL; leave unset to use SQLite (resets on redeploy)
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        value: straywatch-verify
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_DISPLAY_NUMBER
+        sync: false
+      - key: SW_DEMO_MODE
+        value: "1"
