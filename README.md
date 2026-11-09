@@ -11,6 +11,9 @@ dogs and cows, powered by the **BharatCode model API**.
 🌐 **Live demo: [straywatch-0h6w.onrender.com](https://straywatch-0h6w.onrender.com)** (try it in your browser, no sign-up) · 🏙️ [City view](https://straywatch-0h6w.onrender.com/city) · 🧪 `11 tests passing`
 
 > The free server sleeps when idle, so the first visit can take up to a minute to wake up.
+>
+> **Status:** the website runs the full assistant live. The WhatsApp connection is built and tested with simulated
+> Meta webhooks; going live on a WhatsApp number is waiting on Meta business verification.
 
 ---
 
