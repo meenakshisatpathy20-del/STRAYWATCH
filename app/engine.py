@@ -262,7 +262,7 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
 # ------------------------------------------------------------------ shared helpers
 
 def need_location(u: User) -> Out:
-    return Out(u.id, "Please share the location 📍 (WhatsApp: tap 📎 → Location → Send your current location).",
+    return Out(u.id, "Please share the location 📍 (in the app tap 📍; on WhatsApp tap 📎 → Location).",
                ask_location=True)
 
 

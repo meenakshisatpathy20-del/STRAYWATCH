@@ -2,6 +2,7 @@
 (function () {
   const $ = (s) => document.querySelector(s);
   const msgs = $("#msgs"), helper = $("#helper"), traceEl = $("#trace");
+  const APP = document.body.dataset.mode === "app";  // the installable app screen (/app): real use, no demo panels
   const DEMO_SPOT = { lat: 23.3725, lon: 85.3330, label: "Lalpur, Ranchi" };
   const RATU_RD = { lat: 23.3905, lon: 85.3050, label: "Ratu Road, Ranchi" };
   let traceAfter = 0, busy = false, helperAs = "demo:priya";
@@ -31,7 +32,7 @@
       row.appendChild(el);
     });
     if (m.ask_location && !asUser) {
-      [["📍 My location", "real"], ["📍 Demo spot: Lalpur", "demo"]].forEach(([t, k]) => {
+      (APP ? [["📍 Share my location", "real"]] : [["📍 My location", "real"], ["📍 Demo spot: Lalpur", "demo"]]).forEach(([t, k]) => {
         const el = document.createElement("button"); el.type = "button"; el.textContent = t;
         el.onclick = () => shareLocation(k);
         row.appendChild(el);
@@ -102,7 +103,7 @@
     send({ file: f, echo: "📷 Photo", previewSrc: URL.createObjectURL(f) });
     e.target.value = "";
   });
-  $("#locbtn").addEventListener("click", () => shareLocation(confirm("Share your real location?\n\nCancel = use the demo spot in Lalpur, Ranchi (where the sample animals live).") ? "real" : "demo"));
+  $("#locbtn").addEventListener("click", () => shareLocation(APP || confirm("Share your real location?\n\nCancel = use the demo spot in Lalpur, Ranchi (where the sample animals live).") ? "real" : "demo"));
 
   // ---------- sample scenarios
   async function sampleFile(name) {
@@ -171,6 +172,7 @@
     try {
       const mine = await (await fetch("/api/inbox")).json();
       (mine.messages || []).forEach((m) => bubble(msgs, m, false));
+      if (!helper) return;
       for (const who of Object.keys(helperLog)) {
         const j = await (await fetch("/api/inbox?as_user=" + encodeURIComponent(who))).json();
         (j.messages || []).forEach((m) => {
@@ -186,6 +188,7 @@
     } catch (e) {}
   }
   async function pollTrace() {
+    if (!traceEl) return;
     try {
       const j = await (await fetch("/api/trace?after=" + traceAfter)).json();
       if (j.steps.length && traceEl.querySelector(".empty")) traceEl.innerHTML = "";
@@ -208,5 +211,8 @@
   // Arrived from a poster's "I've seen her" link?
   const seen = new URLSearchParams(location.search).get("seen");
   if (seen) { ensureLang().then(() => send({ text: "SEEN " + seen })); }
-  else if (!msgs.children.length) bubble(msgs, { text: "Namaste! 🐾 Pick a sample above, or say *hi* to start." }, false);
+  else if (!msgs.children.length) {
+    if (APP) send({ button: "menu" });  // opens with the language picker (first time) or the main menu
+    else bubble(msgs, { text: "Namaste! 🐾 Pick a sample above, or say *hi* to start." }, false);
+  }
 })();
