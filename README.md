@@ -100,7 +100,7 @@ example, if a reporter writes *"khoon aa raha hai"* (it's bleeding) but the phot
 | Scene reading: healthy dog, cow on road, cat, blank image, text-only Hinglish SOS | 5/5 correct; blank image rejected as "no animal"; text-only SOS → dog · injured · **high** |
 | Re-identification: 11 animals, each shown again cropped, mirrored and darker among 5–6 look-alikes | **11/11** recognised, ~1.2 s each |
 | Animal absent from candidates (should say "none") | 5/6 correct; the miss was two near-identical white cows, so matches always go to a human to confirm |
-| Full SOS: report → triage → recognised as Bruno → caretaker alerted (in Hindi) → accepted → closed | ✅ about 6 s from the location being shared to the caretaker's alert |
+| Full SOS: report → triage → recognised as Bruno → caretaker alerted (in Hindi) → accepted → closed | ✅ about 6 s locally, about 10 s on the live free-tier server, from the location being shared to the caretaker's alert |
 | Escalation: caretaker silent → next helper → "can't go" → third helper (in Bengali), reporter updated | ✅ |
 | Lost & Found: lost cow posted → found in yesterday's sightings 1.6 km away → owner confirms → finder thanked | ✅ |
 
@@ -123,8 +123,8 @@ Real-world accuracy needs a pilot with real caretakers, which is our next step.
 ## Architecture
 ```mermaid
 flowchart LR
-  WA[WhatsApp Cloud API] --> E
-  WEB[Website chat] --> E
+  APP[StrayWatch app<br/>installable web app + website] --> E
+  WA[WhatsApp add-on<br/>Cloud API webhook] -.-> E
   E[Conversation engine<br/>app/engine.py] -->|photo + text| AI[BharatCode Responses API<br/>qwen3.5-397b · gemma-4-31b-it]
   AI -->|validated JSON| E
   E --> DB[(Postgres / SQLite<br/>animals, cases, sightings, lost posts)]
@@ -134,7 +134,9 @@ flowchart LR
 - `app/engine.py`: channel-agnostic flows (welcome, My Animals, SOS, Lost & Found); returns messages for many people
 - `app/ai.py`: every BharatCode call, validation, retries and fallbacks
 - `app/channels/whatsapp.py`: webhook, media download, buttons, lists, location requests
-- `app/main.py`: website, browser chat, public posters, webhook, escalation loop
+- `app/main.py`: website, the installable app (`/app`, manifest, service worker), public posters, City view,
+  WhatsApp webhook, escalation loop
+- `app/templates/`, `app/static/`: the doodle-style pages and the chat UI
 
 ## Run it
 ```bash
