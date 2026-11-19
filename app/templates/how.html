@@ -10,8 +10,8 @@
 <section>
   <div class="section-title"><h2>The six steps</h2><span class="hand">with a real example</span></div>
   <ol class="flow">
-    <li><span class="n">1</span><b>Spotted</b><p>A citizen sends a photo + location, or a road camera sees an animal in a lane too long.</p><em>example: “kutta ghayal hai, pair se khoon”</em></li>
-    <li><span class="n">2</span><b>Read</b><p>Triage agent: species, injury, on the road, blocking a lane. The reporter's words override a calm-looking photo.</p><em>target &lt; 5 s · measured ~2–3 s</em></li>
+    <li><span class="n">1</span><b>Spotted</b><p>A citizen sends a photo + location (or types a landmark), or a road camera sees an animal lying in a lane.</p><em>example: “kutta ghayal hai, pair se khoon”</em></li>
+    <li><span class="n">2</span><b>Read</b><p>Triage agent: species, injured or sick, lying down, on the road. The reporter's words override a calm-looking photo; if the photo is unclear, it asks.</p><em>target &lt; 5 s · measured ~2–3 s</em></li>
     <li><span class="n">3</span><b>Known animal?</b><p>Identify agent compares registered animals within 1 km. Has a caretaker? They hear first.</p><em>target &lt; 3 s · measured ~1.2 s</em></li>
     <li><span class="n">4</span><b>Routed</b><p>Rules set urgency and pick the nearest right team.</p><em>alert &lt; 30 s</em></li>
     <li><span class="n">5</span><b>Escalated</b><p>No accept? Watch agent asks the next one, then the duty coordinator. The reporter is kept updated.</p><em>3 min (HIGH) / 10 min (CHECK) per hop</em></li>
@@ -25,13 +25,13 @@
     <table class="cmp">
       <thead><tr><th>Level</th><th>When</th><th>Who is asked</th></tr></thead>
       <tbody>
-        <tr><td><span class="pill HIGH">HIGH · URGENT</span></td><td>Lane blocked on a main road or at peak hour (8–11 AM, 5–8 PM) · aggressive animal near traffic · hurt or trapped animal on the road · the person on the spot says it's hurt</td><td>Caretaker → NGO / vet, municipal cattle team, ABC team or traffic police (by case) → volunteers → duty coordinator. 3 minutes each.</td></tr>
-        <tr><td><span class="pill CHECK">CHECK</span></td><td>Injured, sick, limping or lying still off the road · blockage on a minor road off-peak · dead animal</td><td>Same order, 10 minutes each.</td></tr>
-        <tr><td><span class="pill LOW">LOW</span></td><td>Off the road and not hurt</td><td>Nobody is disturbed. Logged for the hotspot map. The citizen can tap “It's hurt” any time.</td></tr>
+        <tr><td><span class="pill HIGH">HIGH · URGENT</span></td><td>Injured, sick, trapped or lying animal <b>on the road</b> (it needs care, and it can cause an accident) · dead animal on the road · trapped animal anywhere · the person on the spot says it's hurt and it's on the road</td><td>Caretaker → rescue NGO → vet → municipal cattle team (for cows) → traffic police (busy road: guard the spot) → volunteers → duty coordinator. 3 minutes each. Driver signboard turns on.</td></tr>
+        <tr><td><span class="pill CHECK">NEEDS CARE</span></td><td>Injured or sick animal off the road · dead animal off the road · animal lying in a lane whose condition is unclear</td><td>Same order, 10 minutes each.</td></tr>
+        <tr><td><span class="pill LOW">NO CASE</span></td><td>Healthy animal standing, eating or wandering, on the road or not</td><td>Nobody is disturbed; it is only counted for the traffic hotspot map. The citizen can tap “It's hurt” any time. StrayWatch never removes healthy strays.</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="note" style="margin-top:10px">Same input → same urgency, every time: 12 unit tests in <code>tests/test_rules.py</code>.</p>
+  <p class="note" style="margin-top:10px">Same input → same urgency, every time: 13 unit tests in <code>tests/test_rules.py</code>.</p>
 </section>
 
 <section>
@@ -39,10 +39,10 @@
   <div class="grid3">
     <div class="card"><span class="tag" style="background:var(--coral-soft)">AI · vision LLM</span><h3 style="margin-top:8px">Triage agent</h3><p>Reads photo + text in 6 languages into a strict, validated record. Asks if the location is missing.</p></div>
     <div class="card"><span class="tag" style="background:var(--coral-soft)">AI · vision LLM</span><h3 style="margin-top:8px">Identify agent</h3><p>Matches a photo to nearby registered animals and lost posters. Acts alone only at 95%+; otherwise asks a human.</p></div>
-    <div class="card"><span class="tag" style="background:var(--coral-soft)">AI · YOLOv8 at the edge</span><h3 style="margin-top:8px">Camera agent</h3><p>Flags an animal standing or lying still in a lane past a time limit, on hotspot cameras.</p></div>
+    <div class="card"><span class="tag" style="background:var(--coral-soft)">AI · YOLOv8 at the edge</span><h3 style="margin-top:8px">Camera agent</h3><p>Flags an animal <b>lying</b> in a traffic lane and not moving: likely hurt, and an accident risk. Ignores healthy animals.</p></div>
     <div class="card"><span class="tag" style="background:var(--mint-soft)">Rules + map</span><h3 style="margin-top:8px">Dispatch agent</h3><p>Applies the rules and distance, alerts the right responder, checks the proof photo.</p></div>
     <div class="card"><span class="tag" style="background:var(--mint-soft)">Timers</span><h3 style="margin-top:8px">Watch agent</h3><p>Times every open case; escalates to the next responder, then the coordinator.</p></div>
-    <div class="card"><span class="tag" style="background:var(--mint-soft)">Data queries</span><h3 style="margin-top:8px">Hotspot agent</h3><p>Turns repeat cases into actions: “cattle team to Ratu Road at 5 PM”.</p></div>
+    <div class="card"><span class="tag" style="background:var(--mint-soft)">Data queries</span><h3 style="margin-top:8px">Hotspot agent</h3><p>Finds where animals keep getting hurt, and when: “add lights and a speed breaker on Ratu Road; keep a rescuer on call at 6 PM”.</p></div>
   </div>
   <div class="card" style="margin-top:20px;background:var(--sun-soft)">
     <b class="display" style="font-size:22px">Why split it?</b>

@@ -8,7 +8,7 @@
 </div>
 
 <div class="kpis">
-  <div class="stat"><b>{{ c.cases }}</b><span>cases · {{ c.high }} urgent · {{ c.check }} needed a check · {{ c.low }} logged only</span></div>
+  <div class="stat"><b>{{ c.cases }}</b><span>reports · {{ c.high }} urgent · {{ c.check }} needed care · {{ c.low }} healthy (no case)</span></div>
   <div class="stat"><b>{{ c.assigned }}/{{ c.dispatched }}</b><span>dispatched cases picked up{% if c.median_accept is not none %} · median {{ c.median_accept }} min{% endif %}{% if c.unanswered %} · {{ c.unanswered }} unanswered{% endif %}</span></div>
   <div class="stat"><b>{{ c.proof_pct }}%</b><span>closed with a proof photo ({{ c.proofed }}/{{ c.closed }})</span><div class="bar"><i style="width:{{ c.proof_pct }}%"></i></div></div>
   <div class="stat"><b>{{ c.camera_cases }}</b><span>cases raised by road cameras</span></div>
@@ -17,16 +17,16 @@
 </div>
 
 <section>
-  <div class="section-title"><h2>📈 Hotspot agent: act before the rush</h2><span class="hand">same road, same hour</span></div>
+  <div class="section-title"><h2>📈 Hotspot agent: where animals keep getting hurt</h2><span class="hand">same road, same hour</span></div>
   {% if hotspots %}
   <div class="grid3">
     {% for h in hotspots %}
-    <div class="card" style="box-shadow:4px 4px 0 var(--coral)"><span class="tag">Cattle on road</span>
+    <div class="card" style="box-shadow:4px 4px 0 var(--coral)"><span class="tag">Injury hotspot</span>
       <p style="margin:10px 0 4px;font-size:19px;font-family:'Baloo 2';font-weight:800;line-height:1.2">{{ h.action }}</p>
-      <p class="note" style="margin:0">{{ h.why }}</p></div>
+      <p class="note" style="margin:0 0 8px">{{ h.why }}</p><p style="margin:0">✅ {{ h.fix }}</p></div>
     {% endfor %}
   </div>
-  {% else %}<p class="note">No repeat pattern yet. An action appears when 2+ cattle-on-road reports happen at the same place in the same 2-hour window.</p>{% endif %}
+  {% else %}<p class="note">No repeat pattern yet. An action appears when 2+ animals are hurt on the road at the same place in the same 2-hour window.</p>{% endif %}
 </section>
 
 <section>

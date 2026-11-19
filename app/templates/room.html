@@ -8,14 +8,14 @@
 </div>
 
 <div class="agents" id="agents" aria-label="Agents">
-  {% for a, icon, what in [("Triage","🔍","reads photos + text"),("Identify","🐾","recognises known animals"),("Camera","🎥","watches hotspot lanes"),("Rules","⚖️","sets urgency (code)"),("Dispatch","📣","alerts the right team"),("Watch","⏱️","escalates on time"),("Hotspot","📈","learns where it repeats")] %}
+  {% for a, icon, what in [("Triage","🔍","reads photos + text"),("Identify","🐾","recognises known animals"),("Camera","🎥","spots animals lying in lanes"),("Rules","⚖️","sets urgency (code)"),("Dispatch","📣","alerts the right team"),("Watch","⏱️","escalates on time"),("Hotspot","📈","finds where animals get hurt")] %}
   <div class="agent" data-agent="{{ a }}"><span class="ai">{{ icon }}</span><div><b>{{ a }}{% if a != "Rules" %} agent{% endif %}</b><small>{{ what }}</small></div><span class="count" title="steps in the last 24 hours">0</span></div>
   {% endfor %}
 </div>
 
 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
   <a class="btn coral small" href="/demo">📱 Report a test case in the demo</a>
-  {% if demo %}<button class="btn sun small" id="replay" type="button">🎥 Replay a real camera event</button>{% endif %}
+  {% if demo %}<button class="btn sun small" id="replay" type="button">🎥 Replay a camera event: dog lying on a road</button>{% endif %}
   <span class="note" id="replayMsg" aria-live="polite"></span>
 </div>
 

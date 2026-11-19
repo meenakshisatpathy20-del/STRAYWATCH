@@ -13,7 +13,7 @@ from PIL import Image, ImageEnhance, ImageOps
 from sqlalchemy import select
 
 from . import photos
-from .db import Animal, Case, CaseEvent, LostPost, SessionLocal, Sighting, User, now
+from .db import Animal, Case, CaseEvent, LostPost, SessionLocal, Setting, Sighting, User, now
 
 PHOTOS = Path(__file__).resolve().parent.parent / "data" / "demo_photos"
 SAMPLES = Path(__file__).resolve().parent / "static" / "samples"
@@ -56,7 +56,7 @@ RESPONDERS = [
     ("demo:ngo", "Sample NGO rescue team", "ngo", "en", (23.3690, 85.3250)),
     ("demo:vet", "Sample partner vet clinic", "vet", "hi", (23.3600, 85.3350)),
     ("demo:cattle", "Sample municipal cattle team", "municipal_cattle", "hi", (23.3800, 85.3100)),
-    ("demo:abc", "Sample municipal ABC (dog) team", "abc", "hi", (23.3550, 85.3200)),
+    ("demo:abc", "Sample municipal animal team", "municipal", "hi", (23.3550, 85.3200)),
     ("demo:police", "Sample traffic police desk", "police", "hi", (23.3650, 85.3300)),
     ("demo:coord", "Sample duty coordinator", "coordinator", "en", (23.3441, 85.3096)),
 ]
@@ -64,15 +64,28 @@ RESPONDERS = [
 
 def seed_responders(s):
     for uid, org, role, lang, (lat, lon) in RESPONDERS:
-        if not s.get(User, uid):
+        u = s.get(User, uid)
+        if not u:
             s.add(User(id=uid, name=org, org=org, role=role, lang=lang, is_volunteer=False, lat=lat, lon=lon, state={}))
+        else:  # keep sample teams in step with the current rules
+            u.name, u.org, u.role = org, org, role
     s.commit()
+
+
+SAMPLE_VERSION = "2"  # bump when the sample cases change
 
 
 def seed_cases(s):
     """Three finished SAMPLE cases with full ledgers, so a fresh demo isn't empty. Clearly labelled as samples."""
-    if s.query(Case).filter(Case.reporter_id.like("demo:%")).first():
+    ver = s.get(Setting, "sample_cases")
+    if ver and ver.value == SAMPLE_VERSION:
         return
+    # Replace older sample cases (only ones reported by sample users) with the current set.
+    old = list(s.query(Case).filter(Case.reporter_id.like("demo:%")))
+    for c in old:
+        s.query(CaseEvent).filter(CaseEvent.case_id == c.id).delete()
+        s.delete(c)
+    s.merge(Setting(key="sample_cases", value=SAMPLE_VERSION))
 
     def ph(fname):
         return photos.save(s, _jpg(PHOTOS / fname)).id
@@ -90,42 +103,57 @@ def seed_cases(s):
     case(t0, [
         (0, "Person", "reported", "Sample case: a citizen reported a dog with a photo and the words “gaadi ne maara”."),
         (0.05, "Triage", "triaged", "Adult tan dog lying by the road, holding up its front leg. (condition: injured, on road: yes)"),
-        (0.06, "Rules", "ruled", "HIGH: hurt or trapped animal on the road"),
+        (0.06, "Rules", "ruled", "HIGH: hurt animal on the road: it needs care, and it can cause an accident"),
         (0.08, "Dispatch", "planned", "Order: animal rescue NGO → partner vet → StrayWatch volunteer → duty coordinator. Each gets 3 minutes."),
         (0.1, "Dispatch", "alerted", "Alerted animal rescue NGO (responder #1, 0.9 km away). Waiting 3 minutes."),
         (2.4, "Person", "accepted", "Sample NGO rescue team accepted after 2.4 min."),
         (41, "Dispatch", "closed", "Closed after 41 min. Proof photo checked by AI: dog resting on a blanket at a clinic.")],
         reporter_id="demo:neha", photo_id=ph("dog_5.jpg"), lat=23.3690, lon=85.3310, status="closed", level="HIGH",
-        reasons=["hurt or trapped animal on the road"], teams=["ngo", "vet", "volunteer"], hop_minutes=3, source="citizen",
+        reasons=["hurt animal on the road: it needs care, and it can cause an accident"], teams=["ngo", "vet", "volunteer"], hop_minutes=3, source="citizen",
         assigned_to="demo:ngo", accepted_at=now() - timedelta(hours=t0) + timedelta(minutes=2.4),
         closed_at=now() - timedelta(hours=t0) + timedelta(minutes=41), proof_photo_id=ph("dog_3.jpg"),
         proof_note="Sample: dog resting on a blanket at a clinic.",
         triage={"species": "dog", "condition": "injured", "on_road": True, "summary": "Sample: adult tan dog lying by the road, holding up its front leg."})
     t1 = 7
     case(t1, [
-        (0, "Camera", "reported", "Sample camera · Ratu Road junction: a cow has stayed 64 s in a traffic lane."),
-        (0.05, "Triage", "triaged", "Three cows standing across the left lane of a main road at a junction. (condition: healthy, on road: yes)"),
-        (0.06, "Rules", "ruled", "HIGH: lane blocked on a main road"),
-        (0.08, "Dispatch", "planned", "Order: municipal cattle team → traffic police → StrayWatch volunteer → duty coordinator. Each gets 3 minutes."),
-        (0.1, "Dispatch", "alerted", "Alerted municipal cattle team (responder #1, 1.3 km away). Waiting 3 minutes."),
-        (3.1, "Watch", "timeout", "No reply in 3 minutes. Moving on."),
-        (3.1, "Dispatch", "alerted", "Alerted traffic police (responder #2, 2.9 km away). Waiting 3 minutes."),
-        (4.0, "Person", "accepted", "Sample traffic police desk accepted after 4.0 min."),
-        (22, "Dispatch", "closed", "Closed after 22 min. Proof photo checked by AI: cows moved to the roadside verge.")],
+        (0, "Camera", "reported", "Sample camera · Ratu Road junction: a cow has been lying in a traffic lane for 34 s."),
+        (0.05, "Triage", "triaged", "A cow lying in the left lane, unable to get up; a wound on its hind leg. (condition: injured, on road: yes)"),
+        (0.06, "Rules", "ruled", "HIGH: hurt animal on the road: it needs care, and it can cause an accident"),
+        (0.08, "Dispatch", "planned", "Order: animal rescue NGO → partner vet → municipal cattle team → traffic police → StrayWatch volunteer → duty coordinator. Each gets 3 minutes."),
+        (0.1, "Dispatch", "alerted", "Alerted animal rescue NGO (responder #1, 2.4 km away). Waiting 3 minutes."),
+        (2.1, "Person", "accepted", "Sample NGO rescue team accepted after 2.1 min."),
+        (2.3, "Dispatch", "alerted", "Alerted traffic police (extra help: guard the spot). Waiting 3 minutes."),
+        (38, "Dispatch", "closed", "Closed after 38 min. Proof photo checked by AI: cow on the roadside verge being treated.")],
         reporter_id="demo:camera", photo_id=ph("cow_3.jpg"), lat=23.3906, lon=85.3051, status="closed", level="HIGH",
-        reasons=["lane blocked on a main road"], teams=["municipal_cattle", "police", "volunteer"], hop_minutes=3,
-        source="camera", assigned_to="demo:police", accepted_at=now() - timedelta(hours=t1) + timedelta(minutes=4),
-        closed_at=now() - timedelta(hours=t1) + timedelta(minutes=22), proof_photo_id=ph("cow_6.jpg"),
-        proof_note="Sample: cows moved to the roadside verge.",
-        triage={"species": "cow", "condition": "healthy", "on_road": True, "blocking_lane": True,
-                "summary": "Sample: three cows standing across the left lane of a main road."})
+        reasons=["hurt animal on the road: it needs care, and it can cause an accident"],
+        teams=["ngo", "vet", "municipal_cattle", "police", "volunteer"], hop_minutes=3,
+        source="camera", assigned_to="demo:ngo", accepted_at=now() - timedelta(hours=t1) + timedelta(minutes=2.1),
+        closed_at=now() - timedelta(hours=t1) + timedelta(minutes=38), proof_photo_id=ph("cow_6.jpg"),
+        proof_note="Sample: cow on the roadside verge being treated.",
+        triage={"species": "cow", "condition": "injured", "on_road": True, "blocking_lane": True, "lying_still": True,
+                "summary": "Sample: a cow lying in the left lane with a hind-leg wound."})
+    # Same road, same time of day, the day before: the Hotspot agent should notice the pattern.
+    case(t1 + 24, [
+        (0, "Person", "reported", "Sample case: a citizen reported a dog hit by a bike on Ratu Road."),
+        (0.05, "Triage", "triaged", "A dog lying at the edge of the road, bleeding from a front leg. (condition: injured, on road: yes)"),
+        (0.06, "Rules", "ruled", "HIGH: hurt animal on the road: it needs care, and it can cause an accident"),
+        (0.1, "Dispatch", "alerted", "Alerted animal rescue NGO (responder #1, 2.5 km away). Waiting 3 minutes."),
+        (1.6, "Person", "accepted", "Sample NGO rescue team accepted after 1.6 min."),
+        (45, "Dispatch", "closed", "Closed after 45 min. Proof photo checked by AI: dog bandaged at a clinic.")],
+        reporter_id="demo:sunita", photo_id=ph("dog_7.jpg"), lat=23.3912, lon=85.3046, status="closed", level="HIGH",
+        reasons=["hurt animal on the road: it needs care, and it can cause an accident"], teams=["ngo", "vet", "volunteer"],
+        hop_minutes=3, source="citizen", assigned_to="demo:ngo",
+        accepted_at=now() - timedelta(hours=t1 + 24) + timedelta(minutes=1.6),
+        closed_at=now() - timedelta(hours=t1 + 24) + timedelta(minutes=45), proof_photo_id=ph("dog_3.jpg"),
+        proof_note="Sample: dog bandaged at a clinic.",
+        triage={"species": "dog", "condition": "injured", "on_road": True, "summary": "Sample: a dog hit by a bike, bleeding from a front leg."})
     case(3, [
         (0, "Person", "reported", "Sample case: a citizen reported a cat with a photo."),
         (0.05, "Triage", "triaged", "Adult cat resting on a wall, no visible injuries. (condition: healthy, on road: no)"),
-        (0.06, "Rules", "ruled", "LOW: off the road and not hurt"),
+        (0.06, "Rules", "ruled", "LOW: healthy animal: no rescue needed"),
         (0.07, "Hotspot", "logged", "Added to the hotspot map. No responder disturbed.")],
         reporter_id="demo:sunita", photo_id=ph("cat_2.jpg"), lat=23.3550, lon=85.3150, status="logged", level="LOW",
-        reasons=["off the road and not hurt"], teams=[], hop_minutes=0, source="citizen",
+        reasons=["healthy animal: no rescue needed"], teams=[], hop_minutes=0, source="citizen",
         triage={"species": "cat", "condition": "healthy", "on_road": False, "summary": "Sample: adult cat resting on a wall."})
     s.commit()
 

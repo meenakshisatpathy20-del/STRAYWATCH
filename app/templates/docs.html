@@ -11,7 +11,7 @@
   <div class="section-title"><h2>Architecture</h2><span class="hand">every input becomes one case; every agent works from one ledger</span></div>
   <div class="arch">
     <div class="arch-col"><div class="arch-h">Inputs</div>
-      <div class="arch-box">📱 StrayWatch app (installable PWA)</div><div class="arch-box">💬 WhatsApp add-on</div><div class="arch-box">🎥 Camera agent (YOLOv8 at the edge)</div></div>
+      <div class="arch-box">📱 StrayWatch app (installable PWA)</div><div class="arch-box">💬 WhatsApp add-on</div><div class="arch-box">🎥 Camera agent (YOLOv8 at the edge)</div><div class="arch-box">🩺 Vet consults</div></div>
     <div class="arch-arrow" aria-hidden="true">→</div>
     <div class="arch-col arch-room"><div class="arch-h">Agent Room (FastAPI)</div>
       <div class="arch-box">Channel adapters → one event format</div>
@@ -34,13 +34,13 @@
         {% for f, st, note in [
           ("Citizen reporting (photo or words, 6 languages)", "Working", "Live web app; Hinglish understood; no sign-up"),
           ("Triage + Identify agents", "Working", "Vision LLM, strict JSON validated field by field; caretaker first at 95%+"),
-          ("Urgency rules HIGH / CHECK / LOW", "Working", "Deck slide 7 as plain code; unit-tested"),
-          ("Right-team routing", "Working", "Caretaker → NGO / vet / municipal cattle / ABC / police → volunteers (sample teams)"),
+          ("Urgency rules: URGENT / NEEDS CARE / NO CASE", "Working", "Hurt on the road = URGENT; healthy animals are never dispatched; unit-tested"),
+          ("Right-team routing", "Working", "Caretaker → rescue NGO → vet → municipal team (cows, dead animals) → police on busy roads → volunteers (sample teams)"),
           ("Watch agent + duty coordinator", "Working", "3 min (HIGH) / 10 min (CHECK) per hop; reporter updated each hop"),
           ("Photo-proof closing", "Working", "AI checks the proof photo shows the animal safe; reporter sees it"),
           ("Case ledger, Agent Room, tracking link", "Working", "Every hand-off recorded and replayable"),
-          ("Camera agent → cases", "Working on recorded video", "YOLOv8n + ByteTrack, dwell + still timers, 35 ms/frame"),
-          ("Hotspot agent + signboard feed", "Working", "Road × hour actions; JSON feed for display boards"),
+          ("Camera agent → cases", "Working on recorded video", "YOLOv8n + ByteTrack: alerts only for an animal lying in a lane; healthy animals ignored"),
+          ("Hotspot agent + signboard feed", "Working", "Where animals keep getting hurt, by road and hour; driver warnings while an injured animal is on the road"),
           ("Lost & Found", "Working", "Searches past and future sightings nearby"),
           ("WhatsApp add-on", "Built", "Tested with simulated webhooks; waiting on Meta verification"),
           ("Vet care", "In progress", "1962 + find a vet live; health check, nutrition, vet handover next"),

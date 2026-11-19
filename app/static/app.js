@@ -203,12 +203,19 @@
           () => send({ file: f, text: "kutta ghayal hai, gaadi ne maara, pair se khoon aa raha hai", echo: "📷 kutta ghayal hai, gaadi ne maara, pair se khoon aa raha hai", previewSrc: URL.createObjectURL(f) }),
           () => send({ lat: DEMO_SPOT.lat + 0.0004, lon: DEMO_SPOT.lon + 0.0003, echo: "📍 Near Lalpur Chowk" }),
         ]);
+      } else if (k === "lying") {
+        const f = await sampleFile("lying_road.jpg");
+        await run([
+          () => send({ button: "m:sos", echo: "Hurt animal: SOS" }),
+          () => send({ file: f, text: "do kutte sadak par pade hain, ek hil nahi raha", echo: "📷 do kutte sadak par pade hain, ek hil nahi raha", previewSrc: URL.createObjectURL(f) }),
+          () => send({ lat: RATU_RD.lat + 0.0002, lon: RATU_RD.lon + 0.0002, echo: "📍 " + RATU_RD.label }),
+        ]);
       } else if (k === "cow") {
         const f = await sampleFile("cow_road.jpg");
         await run([
           () => send({ button: "m:sos", echo: "Hurt animal: SOS" }),
-          () => send({ file: f, echo: "📷 Cows standing in the road", previewSrc: URL.createObjectURL(f) }),
-          () => send({ lat: RATU_RD.lat + 0.0002, lon: RATU_RD.lon + 0.0002, echo: "📍 " + RATU_RD.label }),
+          () => send({ file: f, echo: "📷 Cows walking on the road", previewSrc: URL.createObjectURL(f) }),
+          () => send({ lat: RATU_RD.lat - 0.004, lon: RATU_RD.lon + 0.003, echo: "📍 Near Ratu Road" }),
         ]);
       } else if (k === "register") {
         const f = await sampleFile("register_dog.jpg");

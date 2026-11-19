@@ -262,7 +262,7 @@ def city_view() -> dict:
         actions = []
         for c in cells.values():
             if c["cattle_road"] >= 2:
-                actions.append(("Cattle on road", c, f"{c['cattle_road']} cattle-on-road reports: signage, reflective collars, owner outreach"))
+                actions.append(("Cattle gather on the road", c, f"{c['cattle_road']} sightings of cattle on the road (traffic risk): reflective collars, a feeding spot away from the road, owner outreach"))
             if c["unvaccinated"] >= 2:
                 actions.append(("Vaccination drive", c, f"{c['unvaccinated']} known animals not vaccinated in the last year"))
             if c["sos"] >= 2:
@@ -355,7 +355,7 @@ AGENT_LABELS = {"Triage": "Triage agent", "Rules": "Urgency rules (code)", "Disp
                 "Watch": "Watch agent", "Identify": "Identify agent", "Camera": "Camera agent",
                 "Hotspot": "Hotspot agent", "Person": "Person"}
 STATUS_WORDS = {"alerting": "Finding help", "assigned": "Help on the way", "closed": "Safe · closed",
-                "unanswered": "No responder free yet", "logged": "Logged", "cancelled": "Cancelled"}
+                "unanswered": "No responder free yet", "logged": "Healthy · no case", "cancelled": "Cancelled"}
 
 
 def ist_str(dt) -> str:
@@ -379,7 +379,7 @@ def case_view(s, c: Case) -> dict:
         "unanswered": ("No responder is free yet", "Please call the government animal ambulance on 1962. StrayWatch keeps "
                                                    "the case open and alerts new responders nearby."),
         "cancelled": ("Case cancelled", "You told us the animal had gone, so the responders stood down. Thank you."),
-        "logged": ("Logged, no rescue needed", "It was off the road and not hurt, so nobody was disturbed. It's on the "
+        "logged": ("The animal looked healthy", "No rescue was needed, so nobody was disturbed. It's counted on the "
                                               "hotspot map. If it gets worse, tell StrayWatch in the chat."),
     }.get(c.status, ("Case", ""))
     return {"code": f"SW-{c.id}", "id": c.id, "level": c.level or "HIGH",
@@ -525,7 +525,8 @@ def _camera_event(ev: dict) -> dict:
             raise HTTPException(500, "could not open a case")
         return {"case": f"SW-{case.id}" if case else None, "level": case.level if case else None,
                 "status": case.status if case else None,
-                "summary": f"SW-{case.id} · {case.level} · {case.status}" if case else "no case"}
+                "summary": f"SW-{case.id} · {case.level} · {case.status}" if case else
+                "no case: a healthy animal, logged for the traffic map, nobody dispatched"}
 
 
 @app.post("/api/agents/camera/events")
@@ -542,11 +543,12 @@ async def camera_event(request: Request):
 
 
 @app.post("/api/agents/camera/replay")
-async def camera_replay():
-    """Demo only: replay an event the edge agent really produced on recorded footage (data/camera_samples)."""
+async def camera_replay(which: str = "lying"):
+    """Demo only: replay an event the edge agent really produced (data/camera_samples).
+    'lying' = dogs lying on a road (opens a case); 'standing' = healthy cows walking (ignored)."""
     if not config.DEMO_MODE:
         raise HTTPException(404)
-    sample = HERE.parent / "data" / "camera_samples" / "event_1.json"
+    sample = HERE.parent / "data" / "camera_samples" / ("event_standing.json" if which == "standing" else "event_lying.json")
     if not sample.exists():
         raise HTTPException(404, "no recorded sample")
     import json as _json

@@ -343,6 +343,9 @@ def sos_step(s, u: User, text: str, photo_id: str | None, b: str) -> list[Out]:
     if photo_id:
         d["photo"] = photo_id
         d.pop("desc", None)
+    if b in ("sos:hurt", "sos:fine") and d.get("desc") and d.get("lat") is not None:
+        d["hurt_answer"] = b.split(":")[1]
+        return create_case(s, u, d)
     # Confirming a typed landmark
     if b == "sos:locyes" and d.get("cand"):
         d["lat"], d["lon"] = d["cand"]["lat"], d["cand"]["lon"]
@@ -380,7 +383,7 @@ def sos_step(s, u: User, text: str, photo_id: str | None, b: str) -> list[Out]:
 
 
 RANK = {"LOW": 0, "CHECK": 1, "HIGH": 2}
-LEVEL_WORDS = {"HIGH": "URGENT", "CHECK": "Needs a check", "LOW": "Logged, no rescue needed"}
+LEVEL_WORDS = {"HIGH": "URGENT", "CHECK": "Needs care", "LOW": "Healthy, no rescue needed"}
 TEAM_RADIUS_KM = {"volunteer": None, "caretaker": None}  # None = config.HELPER_RADIUS_KM; teams cover the city
 CITY_RADIUS_KM = 20.0
 
@@ -416,8 +419,13 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
     lat, lon = d["lat"], d["lon"]
     img = photos.data_url(s, d.get("photo"))
     desc = d.get("desc") or ai.describe(s, u.id, img, d.get("text", ""))
-    said_hurt = bool(re.search(INJURY_WORDS, (d.get("text") or "").lower()))
+    said_hurt = bool(re.search(INJURY_WORDS, (d.get("text") or "").lower())) or d.get("hurt_answer") == "hurt"
     desc = apply_reporter_words(s, u.id, desc, d.get("text", ""))
+    if d.get("hurt_answer") == "hurt" and desc.get("condition") in ("healthy", "unknown"):
+        desc = {**desc, "condition": "injured"}
+        step(s, u.id, "Trusted the reporter", "They said the animal needs help.")
+    elif d.get("hurt_answer") == "fine" and desc.get("condition") == "unknown":
+        desc = {**desc, "condition": "healthy"}
     u.state = {}
     if img and not desc["is_animal"] and desc["confidence"] >= 0.7:
         step(s, u.id, "Report not sent", "No animal visible in the photo, so no helper was disturbed.")
@@ -453,6 +461,13 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
         return [Out(u.id, f"*Case SW-{c.id}*\n{msg}\nThank you for looking out for them.", link=track_link(c)),
                 Out(u.id, first_aid_text(desc["first_aid_card"]))]
 
+    if (source == "citizen" and desc.get("condition") == "unknown" and not said_hurt and not d.get("hurt_answer")
+            and not desc.get("lying_still")):
+        # The photo doesn't show it clearly and they didn't say: ask, don't guess.
+        u.state = {"flow": "sos", "d": {**{k: v for k, v in d.items() if k != "desc"}, "desc": desc}}
+        step(s, u.id, "Asked the reporter", "Photo unclear: asked whether the animal is hurt before deciding.")
+        return [Out(u.id, f"{desc['summary']}\nI can't tell from the photo: *is the animal hurt, sick or not moving?*",
+                    buttons=[("sos:hurt", "Yes, it needs help"), ("sos:fine", "No, it looks fine")])]
     recent_mine = s.scalar(select(func.count()).select_from(Case).where(
         Case.reporter_id == u.id, Case.created > now() - timedelta(hours=1))) or 0
     if source == "citizen" and recent_mine >= config.MAX_SOS_PER_HOUR:
@@ -480,10 +495,12 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
         add_sighting(s, u.id, d["photo"], desc, lat, lon, "sos")
     if not dec.dispatch:
         ledger(s, case, "Hotspot", "logged", "Added to the hotspot map. No responder disturbed.")
-        return [Out(u.id, f"*Case SW-{case.id} · {LEVEL_WORDS['LOW']}*\n{desc['summary']}\n\nIt is off the road and "
-                          "doesn't look hurt, so I haven't called a rescuer. I've added it to the hotspot map so the "
-                          "city can see where animals gather. Thank you! 💛\nIf that changes, tap below.",
-                    buttons=[(f"case:worse:{case.id}", "It's hurt / on road"), ("menu", "Menu")], link=track_link(case))]
+        where = ("I've added it to the traffic map, so the city can see where animals gather on roads."
+                 if desc.get("on_road") else "I've noted it, so nobody is disturbed.")
+        return [Out(u.id, f"*Case SW-{case.id} · {LEVEL_WORDS['LOW']}*\n{desc['summary']}\n\nThe animal looks healthy, "
+                          "so I haven't called a rescuer. StrayWatch sends help for animals that are hurt, sick, trapped "
+                          f"or lost. {where} Thank you for caring! 💛\nIf it is hurt or sick, tap below.",
+                    buttons=[(f"case:worse:{case.id}", "It's hurt or sick"), ("menu", "Menu")], link=track_link(case))]
 
     # Is this a known animal? Then its caretaker hears first.
     animal = None
@@ -524,7 +541,10 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
     return outs + alerts
 
 
-INJURY_WORDS = r"(bleed|blood|khoon|injur|hurt|ghayal|chot|wound|fracture|limp|broken|can'?t walk|not moving|accident|hit by|takkar|gaadi ne|maar|trapped|stuck|phans|fasa|dying|unconscious)"
+INJURY_WORDS = (r"(bleed|blood|khoon|injur|hurt|ghayal|chot|zakhm|wound|fracture|limp|langd|broken|toot|can'?t walk|"
+                r"cannot walk|chal nahi|uth nahi|not moving|hil nahi|hilta nahi|behosh|unconscious|accident|hit by|"
+                r"takkar|gaadi ne|kuchal|maar|trapped|stuck|phans|fasa|dying|dead|mar gay|mara hua|sick|bimar|beemar|"
+                r"not eating|kha nahi|ulti|vomit|maggot|keede|keeda|fell down|gir gay|gira|pada hai|padi hai)")
 ROAD_WORDS = r"(road|sadak|highway|accident|hit by|takkar|gaadi|vehicle|truck|bike|car)"
 
 
@@ -537,6 +557,13 @@ def apply_reporter_words(s, uid, desc: dict, text: str) -> dict:
     d = dict(desc)
     hurt = re.search(INJURY_WORDS, t)
     road = re.search(ROAD_WORDS, t)
+    if re.search(r"(dead|mar gay|mara hua|died|lash)", t) and d["condition"] in ("healthy", "unknown", "injured"):
+        d["condition"] = "dead"
+        d["first_aid_card"] = "dead_animal"
+        step(s, uid, "Trusted the reporter", "They said the animal is dead.")
+        if road:
+            d["on_road"] = True
+        return d
     if hurt:
         if d["condition"] in ("healthy", "unknown"):
             d["condition"] = "injured"
@@ -779,26 +806,30 @@ def close_case(s, c: Case, u: User, proof_photo: str | None, note: str) -> list[
 # ------------------------------------------------------------------ CAMERA AGENT
 
 def camera_case(s, cam_id: str, ev: dict, image: bytes) -> tuple[Case | None, list[Out]]:
-    """An edge Camera agent saw an animal in a lane too long. The geometry is fact (code); the AI reads the snapshot."""
+    """The edge Camera agent saw an animal LYING (or not moving) in a traffic lane. Lane geometry is measured fact;
+    the Triage agent reads the snapshot; the rules decide. A healthy animal is only logged: nobody is dispatched."""
     cam = CAMERAS[cam_id]
     u = get_or_create_user(s, f"camera:{cam_id}")
     u.lang, u.name, u.lat, u.lon = "en", cam["name"], cam["lat"], cam["lon"]
     pid = photos.save(s, image).id
     secs = ev.get("seconds_in_lane", 0)
-    kind = ev.get("kind", "dwell")
-    note = (f"{cam['name']}: a {ev.get('species', 'animal')} has " +
-            (f"not moved for {secs:.0f} s in a traffic lane" if kind == "still" else f"stayed {secs:.0f} s in a traffic lane"))
-    desc = ai.describe(s, u.id, photos.data_url(s, pid), "Road camera alert. " + note)
+    kind = ev.get("kind", "lying")
+    species = ev.get("species", "animal")
+    note = (f"{cam['name']}: a {species} has been lying in a traffic lane for {secs:.0f} s" if kind == "lying" else
+            f"{cam['name']}: a {species} has not moved in a traffic lane for {secs:.0f} s")
+    desc = ai.describe(s, u.id, photos.data_url(s, pid), "Road camera alert. " + note +
+                       ". Is the animal lying down, hurt or dead?")
     if not desc["is_animal"] or desc["species"] == "other":
-        desc["is_animal"], desc["species"] = True, ev.get("species", "cow")
-    # Camera geometry is measured, not guessed: the animal IS in the lane.
-    desc.update(on_road=True, blocking_lane=True, road_type=cam.get("road_type", "unknown"))
-    if kind == "still":
-        desc["lying_still"] = True
-        if desc["condition"] == "healthy":
-            desc["condition"] = "unknown"
-    if desc["species"] in ("cow", "buffalo") and desc["first_aid_card"] == "general":
-        desc["first_aid_card"] = "cattle_on_road"
+        desc["is_animal"], desc["species"] = True, species if species in ai.SPECIES else "other"
+    desc.update(on_road=True, blocking_lane=True, road_type=cam.get("road_type", "unknown"))  # measured, not guessed
+    if kind == "lying":
+        desc["lying_still"] = True  # the edge saw a lying posture that didn't change
+    dec = rules.decide(rules.facts_from(desc, False, now()))
+    if not dec.dispatch:
+        # Healthy animal standing or resting: not a case. Count it for the traffic hotspot map only.
+        add_sighting(s, u.id, pid, desc, cam["lat"], cam["lon"], "camera", check=False)
+        step(s, u.id, "Camera: not a case", f"{note}. Triage: {desc['summary']} → {dec.reasons[0]}")
+        return None, []
     s.info.pop("last_case_id", None)
     outs = create_case(s, u, {"photo": pid, "desc": desc, "lat": cam["lat"], "lon": cam["lon"], "camera_note": note},
                        source="camera")
@@ -816,28 +847,26 @@ def place_name(lat, lon) -> str:
 
 
 def hotspot_actions(s, days: int = 30) -> list[dict]:
-    """Hotspot agent: repeat cattle-on-road reports at the same place and time of day become a concrete action."""
+    """Hotspot agent: where animals keep getting hurt or hit on the road, at the same time of day.
+    Each pattern becomes a concrete action for the city (prevention) and for responders (be ready then)."""
     since = now() - timedelta(days=days)
-    rows = []
-    for x in s.scalars(select(Sighting).where(Sighting.created >= since)):
-        if x.species in rules.CATTLE and (x.profile or {}).get("on_road"):
-            rows.append((x.lat, x.lon, x.created))
+    groups: dict[tuple, list] = {}
     for c in s.scalars(select(Case).where(Case.created >= since)):
-        if (c.triage or {}).get("species") in rules.CATTLE and (c.triage or {}).get("on_road"):
-            rows.append((c.lat, c.lon, c.created))
-    groups: dict[tuple, int] = {}
-    for lat, lon, at in rows:
-        hour = rules.ist_hour(at) // 2 * 2  # 2-hour windows
-        key = (place_name(lat, lon), hour)
-        groups[key] = groups.get(key, 0) + 1
+        t = c.triage or {}
+        if t.get("on_road") and (t.get("condition") in ("injured", "sick", "trapped", "dead") or c.level == "HIGH"):
+            hour = rules.ist_hour(c.created) // 2 * 2  # 2-hour windows
+            groups.setdefault((place_name(c.lat, c.lon), hour), []).append(c)
+    h12 = lambda x: f"{(x - 1) % 12 + 1} {'AM' if x % 24 < 12 else 'PM'}"
     out = []
-    for (place, hour), n in sorted(groups.items(), key=lambda kv: -kv[1]):
-        if n < 2:
+    for (place, hour), cs in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+        if len(cs) < 2:
             continue
-        h12 = lambda x: f"{(x - 1) % 12 + 1} {'AM' if x < 12 or x == 24 else 'PM'}"
-        out.append({"place": place, "hour": hour, "count": n,
-                    "action": f"Send the municipal cattle team to {place} around {h12(hour)}",
-                    "why": f"{n} cattle-on-road reports between {h12(hour)} and {h12(hour + 2)} in the last {days} days"})
+        kinds = {(c.triage or {}).get("species", "animal") for c in cs}
+        out.append({"place": place, "hour": hour, "count": len(cs),
+                    "action": f"Animals keep getting hurt on {place} around {h12(hour)}",
+                    "why": f"{len(cs)} injured or dead {'/'.join(sorted(kinds))} cases on the road between {h12(hour)} "
+                           f"and {h12(hour + 2)} in the last {days} days",
+                    "fix": "Add street lighting, a speed breaker or a warning sign here, and keep a rescuer on call at that hour."})
     return out[:6]
 
 
@@ -846,14 +875,15 @@ def signboards(s) -> list[dict]:
     out = []
     for cam_id, cam in CAMERAS.items():
         open_cases = [c for d, c in nearby(s, Case, cam["lat"], cam["lon"], 0.5)
-                      if c.status in ("alerting", "assigned", "unanswered") and c.created > now() - timedelta(minutes=45)]
+                      if c.status in ("alerting", "assigned", "unanswered") and (c.triage or {}).get("on_road")
+                      and c.created > now() - timedelta(minutes=45)]
         cattle = [c for c in open_cases if (c.triage or {}).get("species") in rules.CATTLE]
         dogs = [c for c in open_cases if (c.triage or {}).get("species") == "dog"]
-        msg = ("CATTLE ON ROAD AHEAD · SLOW DOWN" if cattle else
-               "ANIMAL ON ROAD AHEAD · SLOW DOWN" if dogs or open_cases else "")
+        msg = ("INJURED CATTLE ON ROAD AHEAD · SLOW DOWN" if cattle else
+               "INJURED ANIMAL ON ROAD AHEAD · SLOW DOWN" if dogs or open_cases else "")
         out.append({"camera_id": cam_id, "name": cam["name"], "lat": cam["lat"], "lon": cam["lon"],
                     "show": bool(msg), "message_en": msg,
-                    "message_hi": ("आगे सड़क पर पशु · धीरे चलें" if msg else ""),
+                    "message_hi": ("आगे सड़क पर घायल पशु · धीरे चलें" if msg else ""),
                     "cases": [f"SW-{c.id}" for c in open_cases]})
     return out
 

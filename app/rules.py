@@ -18,6 +18,7 @@ TEAM_LABELS = {
     "ngo": "animal rescue NGO",
     "vet": "partner vet",
     "municipal_cattle": "municipal cattle team",
+    "municipal": "municipal animal team",
     "abc": "municipal ABC (dog) team",
     "police": "traffic police",
     "volunteer": "StrayWatch volunteer",
@@ -59,62 +60,63 @@ def ist_hour(utc: datetime) -> int:
 
 
 def decide(f: Facts) -> Decision:
-    """Urgency per deck slide 7, plus one safety addition: a badly hurt, trapped or bleeding animal is always HIGH."""
+    """Urgency for the refined problem: animals in trouble, and the accidents they can cause.
+
+    * injured / sick / trapped animal ON the road -> HIGH (animal welfare + accident risk)
+    * dead animal on the road -> HIGH (removal before it causes a crash); off the road -> CHECK
+    * injured / sick / trapped off the road -> CHECK (needs care)
+    * animal lying still IN a traffic lane, condition unclear -> treated as possibly hurt
+    * healthy animal standing, eating or wandering (on the road or not) -> LOW: no case, nobody dispatched
+    """
     reasons: list[str] = []
-    hurt = f.condition in ("injured", "trapped", "sick") or f.reporter_says_hurt
     cattle = f.species in CATTLE
-    main_or_peak = f.road_type == "main" or is_peak(f.hour_ist)
-
-    level = LOW
-    if f.on_road and f.blocking_lane and main_or_peak:
-        level = HIGH
-        reasons.append("lane blocked on a main road" if f.road_type == "main" else "lane blocked at peak hour")
-    if f.aggressive and f.on_road:
-        level = HIGH
-        reasons.append("aggressive animal near traffic")
-    if f.condition == "trapped" or (hurt and f.on_road):
-        level = HIGH
-        reasons.append("hurt or trapped animal on the road" if f.on_road else "trapped animal")
-    if f.reporter_says_hurt and level != HIGH:
-        level = HIGH
-        reasons.append("the person on the spot says it is hurt")
-    still = f.lying_still and f.condition != "healthy"  # a relaxed, resting animal is not "lying still"
-    if level == LOW and (hurt or still):
-        level = CHECK
-        reasons.append("injured, sick or lying still" if hurt else "lying still")
-    if level == LOW and f.on_road and f.blocking_lane:
-        level = CHECK
-        reasons.append("blocking a minor road off-peak")
-    if level == LOW and f.on_road:
-        level = CHECK
-        reasons.append("on the road")
+    lying_unclear = f.lying_still and f.condition in ("unknown", "sick", "injured")
+    hurt = f.condition in ("injured", "trapped", "sick") or f.reporter_says_hurt or lying_unclear
     if f.condition == "dead":
+        level = HIGH if f.on_road else CHECK
+        reasons.append("dead animal on the road: remove it before it causes an accident" if f.on_road
+                       else "dead animal: needs removal")
+    elif hurt and f.on_road:
+        level = HIGH
+        reasons.append("hurt animal on the road: it needs care, and it can cause an accident")
+        if f.reporter_says_hurt and f.condition not in ("injured", "trapped", "sick"):
+            reasons.append("the person on the spot says it is hurt")
+    elif hurt:
         level = CHECK
-        reasons = ["dead animal: needs removal"]
-    if level == LOW:
-        reasons.append("off the road and not hurt")
-
-    return Decision(level=level, reasons=reasons, teams=teams_for(f, level), hop_minutes=HOP_MINUTES[level],
+        reasons.append("the person on the spot says it is hurt" if f.reporter_says_hurt and f.condition not in
+                       ("injured", "trapped", "sick") else ("trapped animal" if f.condition == "trapped" else
+                                                            "injured or sick animal: needs care"))
+        if f.condition == "trapped":
+            level = HIGH
+    elif f.lying_still and f.on_road and f.blocking_lane:
+        level = CHECK
+        reasons.append("animal lying in a traffic lane: may be hurt, and an accident risk")
+    else:
+        level = LOW
+        reasons.append("healthy animal on the road: no rescue needed, logged for the hotspot map" if f.on_road
+                       else "healthy animal: no rescue needed")
+    return Decision(level=level, reasons=reasons, teams=teams_for(f, level, hurt), hop_minutes=HOP_MINUTES[level],
                     dispatch=level != LOW)
 
 
-def teams_for(f: Facts, level: str) -> list[str]:
+def teams_for(f: Facts, level: str, hurt: bool | None = None) -> list[str]:
     """The right teams, in order. The caretaker (if the animal is known) is always added in front by the engine."""
     if level == LOW:
         return []
-    hurt = f.condition in ("injured", "trapped", "sick") or f.reporter_says_hurt
     cattle = f.species in CATTLE
-    if f.condition == "dead":
-        return ["municipal_cattle" if cattle else "abc", "volunteer"]
+    big_road = f.on_road and (f.blocking_lane or f.road_type == "main")
     teams: list[str] = []
-    if hurt:
-        teams += ["ngo", "vet"]
-    if cattle and f.on_road:
-        teams += ["municipal_cattle"]
-    if f.aggressive and not cattle:
-        teams += ["abc"]
-    if f.on_road and f.blocking_lane and level == HIGH:
-        teams += ["police"]
+    if f.condition == "dead":
+        teams += ["municipal_cattle" if cattle else "municipal"]
+    else:
+        if hurt is None or hurt:
+            teams += ["ngo", "vet"]
+        if cattle and f.on_road:
+            teams += ["municipal_cattle"]  # a big animal needs several people to move safely
+        if not hurt and not cattle:
+            teams += ["ngo"]
+    if big_road:
+        teams += ["police"]  # guard the spot so no vehicle hits the animal or the rescuer
     teams += ["volunteer"]
     return list(dict.fromkeys(teams))
 

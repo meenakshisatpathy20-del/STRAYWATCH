@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}StrayWatch · help the animal, clear the road{% endblock %}
+{% block title %}StrayWatch · help for every injured animal{% endblock %}
 {% block content %}
 <div class="hero" style="padding-top:6px">
   <div class="copy">
-    <div class="hand" style="font-size:24px;color:var(--red)">108 ambulance dispatch, for animals on roads {{ d.heart(22) }}</div>
-    <h1>Help the animal, <span class="hl">clear the road.</span></h1>
-    <p class="lead">See a hurt dog or a cow blocking traffic? Send one photo. StrayWatch's AI agents read it, decide how urgent it is, and alert the right person nearby: the animal's caretaker, an NGO, a vet or the municipal cattle team. You can follow every step until it's safe.</p>
+    <div class="hand" style="font-size:24px;color:var(--red)">like a 108 ambulance, for animals {{ d.heart(22) }}</div>
+    <h1>Help for every <span class="hl">injured animal.</span></h1>
+    <p class="lead">See a hurt, sick or trapped animal, or one lying on the road? Send one photo. StrayWatch's AI agents read it, decide how urgent it is, and alert the right person nearby: the animal's caretaker, a rescue NGO or a vet. An injured animal on the road gets priority, because it can also cause the next accident. You can follow every step until it's safe.</p>
     <div style="display:flex;flex-wrap:wrap;gap:12px">
       <a class="btn coral big" href="/app">🚨 Report an animal</a>
       <a class="btn big" href="/demo">📱 See the live demo</a>
@@ -40,44 +40,46 @@
 </div>
 
 <section style="padding:0">
-  <div class="section-title"><h2>The gap</h2><span class="hand">responders exist, they just find out late</span></div>
+  <div class="section-title"><h2>The gap</h2><span class="hand">help exists, it just arrives late</span></div>
   <div class="card" style="display:flex;flex-wrap:wrap;gap:24px;align-items:center;box-shadow:5px 5px 0 var(--coral)">
-    <p style="flex:2 1 320px;margin:0;font-size:18px"><b>Responders exist, but they find out late and work blind.</b> No exact location, the same animal reported five times, nobody owns the case, and nobody learns where it keeps happening.</p>
+    <p style="flex:2 1 320px;margin:0;font-size:18px"><b>Every day, stray animals are hit, injured or fall sick on our roads, and help reaches them late.</b> People don't know whom to call; rescuers and vets find out without a photo or exact location; nobody owns the case. And an injured animal lying on the road becomes the next accident.</p>
     <div style="flex:1 1 160px"><b class="display" style="font-size:44px;color:var(--red)">437</b><div>deaths in animal–vehicle collisions, Odisha 2024 · <a href="https://www.thestatesman.com/india/odisha-charts-out-action-plan-to-check-road-accidents-due-to-stray-cattle-1503488150.html">The Statesman</a></div></div>
     <div style="flex:1 1 160px"><b class="display" style="font-size:44px;color:var(--red)">900+</b><div>deaths in stray-cattle crashes, Haryana 2018–22 · <a href="https://theprint.in/india/over-900-deaths-in-accidents-caused-by-stray-cattle-in-haryana-in-5-years/1076883">PTI / Assembly reply</a></div></div>
   </div>
 </section>
 
 <section style="padding:0">
-  <div class="section-title"><h2>What StrayWatch does</h2><span class="hand">detect · respond · prevent</span></div>
+  <div class="section-title"><h2>What StrayWatch does</h2><span class="hand">safety · treatment · fewer accidents</span></div>
   <div class="grid3 how">
-    <div class="card" style="box-shadow:5px 5px 0 var(--mint)">
-      <div class="icon" style="background:var(--mint-soft)">👁️</div>
-      <h3>Detect</h3>
-      <ul><li><b>Citizens:</b> a photo or just words, by app or WhatsApp, in 6 languages</li><li><b>Road cameras:</b> AI flags an animal standing or lying in a lane too long</li><li><b>Caretakers:</b> daily check-ins on the animals they feed</li></ul>
-      <a href="/camera">How camera AI works →</a>
-    </div>
     <div class="card" style="box-shadow:5px 5px 0 var(--coral)">
       <div class="icon" style="background:var(--coral-soft)">🚨</div>
-      <h3>Respond</h3>
-      <ul><li>AI reads the case; <b>tested rules</b> set urgency (HIGH / CHECK / LOW)</li><li>Caretaker first, then the right team: NGO, vet, municipal cattle team, ABC team, police</li><li>No reply? It moves on by itself, then the duty coordinator. Closed only with a photo.</li></ul>
+      <h3>Rescue</h3>
+      <ul><li>A photo or just words, in 6 languages; road cameras spot an animal <b>lying</b> in a lane</li><li>AI reads it; <b>tested rules</b> set urgency. Hurt on the road = URGENT</li><li>Caretaker first, then rescue NGO and vet; police guard the spot on busy roads. Closed only with a photo</li></ul>
       <a href="/room">Watch the Agent Room →</a>
     </div>
+    <div class="card" style="box-shadow:5px 5px 0 var(--mint)">
+      <div class="icon" style="background:var(--mint-soft)">🩺</div>
+      <h3>Treatment</h3>
+      <ul><li><b>Online vets</b> for strays and pets, verified</li><li>AI writes the case summary for the vet; emergencies go to 1962</li><li>Health record, vaccine reminders and food advice</li></ul>
+      <a href="/vet">Open Vet care →</a>
+    </div>
     <div class="card" style="box-shadow:5px 5px 0 var(--sky)">
-      <div class="icon" style="background:var(--sky-soft)">📈</div>
-      <h3>Prevent</h3>
-      <ul><li>Hotspots by road and hour, so teams act before the rush</li><li>Signboard warnings for drivers, no app needed</li><li>Lost &amp; Found, vaccination coverage per ward</li></ul>
+      <div class="icon" style="background:var(--sky-soft)">🛣️</div>
+      <h3>Fewer accidents</h3>
+      <ul><li>Signboards warn drivers while an injured animal is on the road</li><li>Hotspots show where animals keep getting hurt, so the city can add lights or speed breakers</li><li>Lost &amp; Found brings lost animals home</li></ul>
       <a href="/city">Open the city dashboard →</a>
     </div>
   </div>
+  <p class="note" style="margin-top:12px">Healthy animals standing, eating or wandering are not cases: nobody is sent, and StrayWatch never removes healthy strays.</p>
 </section>
 
 <section style="padding:0">
   <div class="section-title"><h2>Pick your path</h2></div>
   <div class="grid3">
     <a class="card pathcard" href="/app" style="box-shadow:5px 5px 0 var(--coral)"><b>🙋 I saw an animal in trouble</b><p>Open the app, tap SOS, send a photo and location. Takes under a minute.</p></a>
+    <a class="card pathcard" href="/vet" style="box-shadow:5px 5px 0 var(--mint)"><b>🩺 My animal is sick</b><p>Talk to a verified vet online, for your pet or a street animal you care for.</p></a>
     <a class="card pathcard" href="/lost" style="box-shadow:5px 5px 0 var(--sky)"><b>🔎 My animal is lost</b><p>See lost posters, or post one. The AI checks every photo people send nearby.</p></a>
-    <a class="card pathcard" href="/partners" style="box-shadow:5px 5px 0 var(--mint)"><b>🤝 I want to help</b><p>Join as a volunteer, NGO, vet, municipal team or community page.</p></a>
+    <a class="card pathcard" href="/partners" style="box-shadow:5px 5px 0 var(--sun)"><b>🤝 I want to help</b><p>Join as a volunteer, NGO, vet, municipal team or community page.</p></a>
   </div>
 </section>
 

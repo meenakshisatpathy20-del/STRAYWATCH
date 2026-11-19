@@ -1,10 +1,12 @@
 """StrayWatch Camera agent: runs at the edge, next to a hotspot camera (deck slides 4, 6, 8).
 
-YOLOv8n + ByteTrack at 1-2 fps. For every cow/dog whose feet are inside the lane polygon it keeps two timers:
-  * dwell: the animal has been in the lane longer than --dwell seconds
-  * still: the animal has hardly moved for --still seconds (lying or standing still in traffic)
-When a timer fires, it posts ONE event per animal to the StrayWatch Agent Room (REST), with an annotated snapshot.
-The server's Triage agent and tested rules then decide urgency and who to alert.
+YOLOv8n + ByteTrack at 1-2 fps. It looks for ONE thing: an animal LYING in a traffic lane and not moving
+(likely hurt or hit, and an accident waiting to happen). Healthy animals standing, eating or walking are ignored.
+  * lying posture: the box is low and wide (height/width < --lying-ratio) or the animal's height dropped
+    well below the tallest it was seen (it went down)
+  * not moving: it hardly moved for --still seconds
+When both hold, it posts ONE event per animal to the StrayWatch Agent Room (REST) with an annotated snapshot.
+The server's Triage agent reads the snapshot and the tested rules decide; a healthy resting animal is only logged.
 
 Install on the edge box (Raspberry Pi 5 class or any PC):  pip install ultralytics lap opencv-python-headless
 Run:  python edge/camera_agent.py --video clip.mp4 --camera ratu-rd-01 --server https://<your-app> --key $SW_AGENT_KEY
@@ -69,7 +71,7 @@ def run(a) -> dict:
     poly = (np.array(cam["lane"]) * [W, H]).astype(np.int32)
     diag = math.hypot(W, H)
 
-    first_in, history, sent, events, ms = {}, {}, set(), [], []
+    first_in, history, sent, events, ms, tallest = {}, {}, set(), [], [], {}
     idx = 0
     while True:
         ok, frame = cap.read()
@@ -100,21 +102,22 @@ def run(a) -> dict:
             for tid, box, lab, secs in boxes:
                 if tid in sent:
                     continue
+                x1, y1, x2, y2 = box
+                bw, bh = max(1.0, x2 - x1), max(1.0, y2 - y1)
+                tallest[tid] = max(tallest.get(tid, 0.0), bh)
                 recent = [p for p in history[tid] if p[0] >= t - a.still]
                 moved = max((math.hypot(p[1] - recent[0][1], p[2] - recent[0][2]) for p in recent), default=0) / diag
-                kind = None
-                if t - history[tid][0][0] >= a.still and moved < 0.03:
-                    kind = "still"
-                elif secs >= a.dwell:
-                    kind = "dwell"
-                if not kind:
+                lying = bh / bw < a.lying_ratio or bh < 0.7 * tallest[tid]
+                still_long = t - history[tid][0][0] >= a.still and moved < 0.03
+                if not (lying and still_long):
                     continue
+                kind = "lying"
                 sent.add(tid)
-                label = f"t={t:.1f}s ALERT: {lab} {'still' if kind == 'still' else 'in lane'} {secs:.0f}s"
+                label = f"t={t:.1f}s ALERT: {lab} lying in lane {secs:.0f}s"
                 ev = {"camera_id": a.camera, "kind": kind, "species": lab, "seconds_in_lane": round(secs, 1),
                       "track_id": tid, "video_time_s": round(t, 1), "animals_in_lane": len(boxes),
                       "snapshot_jpeg_b64": snapshot(frame, poly, boxes, tid, label)}
-                print(f"[{t:6.1f}s] {kind.upper()}: {lab} #{tid} in lane {secs:.0f}s", flush=True)
+                print(f"[{t:6.1f}s] LYING: {lab} #{tid} in lane {secs:.0f}s", flush=True)
                 if a.save_events:
                     Path(a.save_events).mkdir(parents=True, exist_ok=True)
                     (Path(a.save_events) / f"event_{len(events) + 1}.json").write_text(json.dumps(ev))
@@ -146,8 +149,8 @@ if __name__ == "__main__":
     p.add_argument("--key", default="", help="agent key (SW_AGENT_KEY on the server)")
     p.add_argument("--model", default="yolov8n.pt")
     p.add_argument("--fps", type=float, default=2.0, help="frames analysed per second (deck: 1-2 fps)")
-    p.add_argument("--dwell", type=float, default=60.0, help="seconds in the lane before an alert")
-    p.add_argument("--still", type=float, default=30.0, help="seconds without moving before an alert")
+    p.add_argument("--still", type=float, default=30.0, help="seconds lying without moving before an alert")
+    p.add_argument("--lying-ratio", type=float, default=0.62, help="box height/width below this = lying posture")
     p.add_argument("--conf", type=float, default=0.25)
     p.add_argument("--max-seconds", type=float, default=1e9)
     p.add_argument("--max-events", type=int, default=5)

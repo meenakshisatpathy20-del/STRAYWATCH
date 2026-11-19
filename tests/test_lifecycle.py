@@ -28,16 +28,26 @@ def report(s, uid="web:r", text=""):
     return talk(s, uid, lat=LALPUR[0], lon=LALPUR[1])
 
 
-def test_cow_blocking_main_road_goes_to_cattle_team_first(s, monkeypatch):
+def test_injured_cow_lying_on_main_road_gets_care_then_cattle_team_and_police(s, monkeypatch):
+    add_team(s, "t:ngo", "ngo")
     add_team(s, "t:cattle", "municipal_cattle")
     add_team(s, "t:police", "police")
-    monkeypatch.setattr(ai, "describe", desc(species="cow", on_road=True, blocking_lane=True, road_type="main",
-                                             summary="A cow standing in the middle lane."))
+    monkeypatch.setattr(ai, "describe", desc(species="cow", condition="injured", on_road=True, blocking_lane=True,
+                                             road_type="main", lying_still=True, summary="A cow lying in the lane, bleeding."))
     out = report(s)
     c = s.query(Case).one()
-    assert c.level == "HIGH" and c.teams[:2] == ["municipal_cattle", "police"]
-    assert [o.to for o in out if o.buttons and o.buttons[0][0].startswith("case:go")] == ["t:cattle"]
+    assert c.level == "HIGH" and c.teams[:4] == ["ngo", "vet", "municipal_cattle", "police"]
+    assert [o.to for o in out if o.buttons and o.buttons[0][0].startswith("case:go")] == ["t:ngo"]
     assert "URGENT" in texts(out, "web:r")
+
+
+def test_healthy_cow_in_traffic_is_not_a_case(s, monkeypatch):
+    add_team(s, "t:cattle", "municipal_cattle")
+    monkeypatch.setattr(ai, "describe", desc(species="cow", on_road=True, blocking_lane=True, road_type="main",
+                                             summary="Cows walking along the road."))
+    out = report(s)
+    c = s.query(Case).one()
+    assert c.status == "logged" and not [o for o in out if o.to != "web:r"], "nobody is dispatched for a healthy animal"
 
 
 def test_calm_animal_off_road_is_only_logged(s, monkeypatch):
@@ -46,10 +56,19 @@ def test_calm_animal_off_road_is_only_logged(s, monkeypatch):
     c = s.query(Case).one()
     assert c.status == "logged" and c.level == "LOW"
     assert not [o for o in out if o.to != "web:r"], "nobody is disturbed for a LOW case"
-    # ...but the citizen can say it got worse, and then responders are alerted
+    # ...but the citizen can say it is hurt after all, and then responders are alerted
     out = talk(s, "web:r", button=f"case:worse:{c.id}")
-    assert c.status == "alerting" and c.level == "HIGH"
+    assert c.status == "alerting" and c.level == "CHECK"
     assert any(o.to == "demo:a" for o in out)
+
+
+def test_unclear_photo_asks_the_reporter_instead_of_guessing(s, monkeypatch):
+    monkeypatch.setattr(ai, "describe", desc(species="dog", condition="unknown", summary="A dog in poor light."))
+    out = report(s)
+    assert "is the animal hurt" in texts(out, "web:r").lower() and s.query(Case).count() == 0
+    out = talk(s, "web:r", button="sos:hurt")
+    c = s.query(Case).one()
+    assert c.level == "CHECK" and c.status == "alerting"
 
 
 def test_escalates_to_duty_coordinator_after_everyone_else(s, monkeypatch):
