@@ -164,6 +164,9 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
                           "and share the location where you saw it.", ask_location=True)]
     if re.fullmatch(r"(?i)\s*(volunteer|helper|join)\s*", text) or b == "vol:yes":
         return volunteer_join(s, u)
+    if b == "loc:denied":  # the phone refused GPS: never guess a location, ask for a landmark instead
+        return [Out(u.id, "I couldn't get your location. 📍\nPlease turn on Location for this site (tap the 🔒 or ⓘ "
+                          "next to the web address), or just *type a nearby landmark and area*, e.g. Lalpur Chowk, Ranchi.")]
     if b == "vol:no":
         return [Out(u.id, "No problem. You can say *volunteer* any time. 💛")]
     if b.startswith("case:"):
@@ -321,20 +324,47 @@ def volunteer_join(s, u) -> list[Out]:
     if u.lat is None:
         u.state = {"flow": "volunteer_loc", "d": {}}
         return [Out(u.id, "Thank you for joining as a helper! 🦸 Share your usual location so I only alert you about "
-                          "animals nearby.", ask_location=True)]
+                          "animals nearby. (Or type your area, e.g. *Lalpur, Ranchi*.)", ask_location=True)]
+    tip = "" if u.id.startswith("wa:") else ("\n\n🔔 Important: in the app, turn on *notifications* (More → Notifications) "
+                                            "so alerts reach you even when StrayWatch is closed.")
     return [Out(u.id, "You're a StrayWatch helper now! 🦸 I'll only alert you about animals within "
                       f"{config.HELPER_RADIUS_KM:g} km, at most {config.MAX_ALERTS_PER_HELPER_PER_DAY} times a day. "
-                      "Type *pause* to stop alerts.")]
+                      "Type *pause* to stop alerts." + tip)]
 
 
 # ------------------------------------------------------------------ RESCUE SOS
+
+LOCATION_ASK = ("Got it. Now please share the location 📍 so help can find the animal.\n"
+                "Can't share it? Type a nearby landmark and area, e.g. *Lalpur Chowk, Ranchi*.")
+
 
 def sos_step(s, u: User, text: str, photo_id: str | None, b: str) -> list[Out]:
     d = dict((u.state or {}).get("d", {}))
     if photo_id:
         d["photo"] = photo_id
         d.pop("desc", None)
-    if text:
+    # Confirming a typed landmark
+    if b == "sos:locyes" and d.get("cand"):
+        d["lat"], d["lon"] = d["cand"]["lat"], d["cand"]["lon"]
+        d["place"] = d.pop("cand")["label"]
+    elif b == "sos:locno":
+        d.pop("cand", None)
+        u.state = {"flow": "sos", "d": d}
+        return [Out(u.id, "Okay. Please type another landmark with the area name, or share your location 📍.",
+                    ask_location=True)]
+    elif text and d.get("asked_loc") and d.get("lat") is None and not re.search(INJURY_WORDS, text.lower()):
+        # They were asked where it is, and typed a place: look it up, and confirm before using it.
+        from . import geo
+        hit = geo.geocode(text, (u.lat, u.lon) if u.lat else None)
+        if not hit:
+            u.state = {"flow": "sos", "d": d}
+            return [Out(u.id, f"I couldn't find “{text[:60]}” on the map. 🙏 Please add the area or city name "
+                              "(e.g. *Ratu Road, Ranchi*), or share your location 📍.", ask_location=True)]
+        d["cand"] = hit
+        u.state = {"flow": "sos", "d": d}
+        return [Out(u.id, f"Is it near *{hit['label']}*?", link=maps_link(hit["lat"], hit["lon"]),
+                    buttons=[("sos:locyes", "Yes, send help"), ("sos:locno", "No, somewhere else")])]
+    elif text:
         d["text"] = (d.get("text", "") + " " + text).strip()
     u.state = {"flow": "sos", "d": d}
     if not d.get("photo") and not d.get("text"):
@@ -343,8 +373,9 @@ def sos_step(s, u: User, text: str, photo_id: str | None, b: str) -> list[Out]:
         if u.lat is not None and b == "sos:here":
             d["lat"], d["lon"] = u.lat, u.lon
         else:
-            return [Out(u.id, "Got it. Now please share the location 📍 so help can find the animal.",
-                        ask_location=True)]
+            d["asked_loc"] = True
+            u.state = {"flow": "sos", "d": d}
+            return [Out(u.id, LOCATION_ASK, ask_location=True)]
     return create_case(s, u, d)
 
 
@@ -422,6 +453,13 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
         return [Out(u.id, f"*Case SW-{c.id}*\n{msg}\nThank you for looking out for them.", link=track_link(c)),
                 Out(u.id, first_aid_text(desc["first_aid_card"]))]
 
+    recent_mine = s.scalar(select(func.count()).select_from(Case).where(
+        Case.reporter_id == u.id, Case.created > now() - timedelta(hours=1))) or 0
+    if source == "citizen" and recent_mine >= config.MAX_SOS_PER_HOUR:
+        step(s, u.id, "Report limit", f"{recent_mine} reports in the last hour; not dispatched.")
+        return [Out(u.id, f"You've sent {recent_mine} reports in the last hour, so I've paused new ones for a while to "
+                          "keep responders free for emergencies. 🙏 If this one is urgent, call the animal ambulance on "
+                          "*1962*.")]
     dec = rules.decide(rules.facts_from(desc, said_hurt, now()))
     case = Case(reporter_id=u.id, photo_id=d.get("photo"), triage=desc, lat=lat, lon=lon,
                 status="alerting" if dec.dispatch else "logged", level=dec.level, reasons=dec.reasons,
@@ -481,7 +519,8 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
         intro += f"\n\nI've alerted the nearest {rules.TEAM_LABELS.get(team, 'helper')}."
     if case.status == "alerting":
         intro += "\nYou can follow every step here:"
-    outs = [Out(u.id, intro, link=track_link(case)), Out(u.id, first_aid_text(desc["first_aid_card"]))]
+    gone = [(f"case:cancel:{case.id}", "Animal has gone")] if case.status == "alerting" else []
+    outs = [Out(u.id, intro, link=track_link(case), buttons=gone), Out(u.id, first_aid_text(desc["first_aid_card"]))]
     return outs + alerts
 
 
@@ -663,6 +702,18 @@ def case_button(s, u: User, b: str) -> list[Out]:
     if action == "nophoto":
         u.state = {}
         return close_case(s, c, u, None, "Closed without a photo (responder couldn't take one).")
+    if action == "cancel":
+        if c.reporter_id != u.id or c.status not in ("alerting", "assigned", "unanswered"):
+            return [Out(u.id, "Thanks for letting me know. 💛")]
+        busy = c.assigned_to or c.current_helper
+        c.status, c.closed_at, c.queue, c.current_helper = "cancelled", now(), [], None
+        ledger(s, c, "Person", "cancelled", "The reporter says the animal has gone or it was a false alarm. "
+                                            "Responders were told to stand down.", trace_title="Case cancelled")
+        outs = [Out(u.id, f"Okay, I've closed case SW-{c.id} and told the responder. Thank you for caring. 💛")]
+        if busy:
+            outs.append(Out(busy, f"ℹ️ Case SW-{c.id} is cancelled: the reporter says the animal has gone. "
+                                  "No need to go. Thank you! 🙏"))
+        return outs
     if action == "worse":
         if c.reporter_id != u.id or c.status != "logged":
             return [Out(u.id, "Thanks, this case is already being handled. 💛")]
@@ -1160,6 +1211,14 @@ def handle_misc(s, u: User, inc: Incoming) -> list[Out] | None:
     if st == "volunteer_loc" and inc.lat is not None:
         u.lat, u.lon, u.state = inc.lat, inc.lon, {}
         return volunteer_join(s, u)
+    if st == "volunteer_loc" and text and not b and text not in ("menu", "cancel", "stop"):
+        from . import geo
+        hit = geo.geocode(inc.text or "", None)
+        if not hit:
+            return [Out(u.id, "I couldn't find that area on the map. Please add the city (e.g. *Lalpur, Ranchi*) or "
+                              "share your location 📍.", ask_location=True)]
+        u.lat, u.lon, u.state = hit["lat"], hit["lon"], {}
+        return [Out(u.id, f"📍 Saved your area as *{hit['label']}*.")] + volunteer_join(s, u)
     if text == "pause":
         u.state = {**(u.state or {}), "paused": True}
         return [Out(u.id, "Alerts paused. Type *resume* to turn them back on.")]
@@ -1190,6 +1249,28 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:  # noqa: F811
 
 
 # ------------------------------------------------------------------ translation at the edge
+
+def translate_texts(s: Session, texts: list[str], lang: str) -> dict[str, str]:
+    """Translate many strings into one language, using the shared cache; one AI call per 12 new strings."""
+    import hashlib
+    out = {t: t for t in texts}
+    if not lang or lang == "en" or lang not in ai.LANGS:
+        return out
+    misses = []
+    for t in dict.fromkeys(x for x in texts if x):
+        hit = s.get(TranslationCache, hashlib.sha256(f"{lang}|{t}".encode()).hexdigest()[:64])
+        if hit:
+            out[t] = hit.text
+        else:
+            misses.append(t)
+    for i in range(0, len(misses), 12):
+        chunk = misses[i:i + 12]
+        for t, tr in zip(chunk, ai.translate_batch(chunk, lang)):
+            out[t] = tr
+            if tr != t:
+                s.merge(TranslationCache(key=hashlib.sha256(f"{lang}|{t}".encode()).hexdigest()[:64], text=tr))
+    return out
+
 
 def localise(s: Session, outs: list[Out]) -> list[Out]:
     """Translate every message into its recipient's language: cached, and one AI call per language."""

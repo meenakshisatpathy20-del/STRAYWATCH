@@ -264,3 +264,4 @@ pre.code{margin:0;white-space:pre-wrap;font-size:14px;background:#1b1626;color:#
 .arch-arrow{font:800 28px "Baloo 2"}
 @media (max-width:900px){.arch{grid-template-columns:1fr}.arch-arrow{transform:rotate(90deg);justify-self:center}}
 @media (max-width:700px){.agents{grid-template-columns:repeat(2,1fr);gap:8px}.agent{padding:6px 8px}.agent small{display:none}.agent b{font-size:15px}}
+.pill.s-cancelled{background:#eee}
