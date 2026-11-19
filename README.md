@@ -109,7 +109,7 @@ Code map: `app/rules.py` (urgency rules) · `app/engine.py` (conversations, disp
 | Report → caretaker alerted | ~10 s on the free live server |
 | Camera agent | Alert for dogs lying on a road; 0 alerts for healthy cows walking on real road video; ~35 ms per frame on a 4-core CPU |
 | Two-city load test (1,238 reports) | Every case got a responder; 0 alerts beyond 8 km or to the wrong city; daily cap held |
-| Automated tests | 84, run in GitHub Actions |
+| Automated tests | 86, run in GitHub Actions |
 
 Honest limits: the responder teams and vets on the live site are **samples** until real partners join; the camera
 model is pretrained (not yet fine-tuned on Indian night footage); care cards await review by a partner vet.
