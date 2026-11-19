@@ -17,7 +17,8 @@ from sqlalchemy import func, select
 
 from . import config, engine
 from .channels import whatsapp
-from .db import Animal, Case, CheckIn, LostPost, Outbox, Photo, SessionLocal, Sighting, Trace, User, init_db
+from .db import (Animal, Case, CaseEvent, CheckIn, LostPost, Outbox, PartnerLead, Photo, SessionLocal, Sighting, Trace,
+                 User, init_db)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("straywatch")
@@ -33,7 +34,7 @@ async def lifespan(_app):
     task.cancel()
 
 
-app = FastAPI(title="StrayWatch", lifespan=lifespan)
+app = FastAPI(title="StrayWatch", lifespan=lifespan, docs_url="/api/docs", redoc_url=None)
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
 _lock = threading.Lock()  # one conversation step at a time keeps SQLite happy and state consistent
@@ -119,6 +120,10 @@ def stats() -> dict:
             "median_accept_min": round(acc[len(acc) // 2], 1) if acc else None,
             "found": len(found),
             "helpers": s.scalar(select(func.count()).select_from(User).where(User.is_volunteer.is_(True))) or 0,
+            "closed": sum(1 for c in cases if c.status == "closed"),
+            "camera": sum(1 for c in cases if c.source == "camera"),
+            "responders": s.scalar(select(func.count()).select_from(User).where(
+                (User.is_volunteer.is_(True)) | (User.role.is_not(None)))) or 0,
         }
 
 
@@ -136,10 +141,81 @@ def post_card(p: LostPost) -> dict:
             "found_hours": round((p.found_at - p.created).total_seconds() / 3600) if p.found_at else None}
 
 
+def page(request: Request, name: str, active: str, **ctx):
+    return templates.TemplateResponse(request, name, {"active": active, "demo": config.DEMO_MODE,
+                                                      "wa_number": config.WA_DISPLAY_NUMBER, **ctx})
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse(request, "index.html", {"stats": stats(), "posts": public_posts(),
-                                                              "wa_number": config.WA_DISPLAY_NUMBER})
+    return page(request, "home.html", "/", stats=stats())
+
+
+@app.get("/demo", response_class=HTMLResponse)
+def demo_page(request: Request):
+    return page(request, "demo.html", "/demo")
+
+
+@app.get("/how", response_class=HTMLResponse)
+def how_page(request: Request):
+    return page(request, "how.html", "/how")
+
+
+@app.get("/room", response_class=HTMLResponse)
+def room_page(request: Request):
+    return page(request, "room.html", "/room")
+
+
+@app.get("/camera", response_class=HTMLResponse)
+def camera_page(request: Request):
+    with SessionLocal() as s:
+        cams = [case_view(s, c) for c in s.scalars(select(Case).where(Case.source == "camera").order_by(Case.id.desc()).limit(6))]
+        boards = engine.signboards(s)
+    return page(request, "camera.html", "/camera", cases=cams, boards=boards)
+
+
+@app.get("/lost", response_class=HTMLResponse)
+def lost_page(request: Request):
+    return page(request, "lost.html", "/lost", posts=public_posts(24))
+
+
+@app.get("/vet", response_class=HTMLResponse)
+def vet_page(request: Request):
+    return page(request, "vet.html", "/vet")
+
+
+@app.get("/promise", response_class=HTMLResponse)
+def promise_page(request: Request):
+    return page(request, "promise.html", "/promise")
+
+
+def _test_count() -> int:
+    tests = HERE.parent / "tests"
+    return sum(f.read_text(encoding="utf-8").count("\ndef test_") for f in tests.glob("test_*.py")) if tests.exists() else 0
+
+
+@app.get("/docs", response_class=HTMLResponse)
+def docs_page(request: Request):
+    return page(request, "docs.html", "/docs", tests=_test_count())
+
+
+@app.get("/partners", response_class=HTMLResponse)
+def partners_page(request: Request, sent: int = 0):
+    return page(request, "partners.html", "/partners", sent=bool(sent))
+
+
+@app.post("/partners")
+def partners_submit(name: str = Form(...), kind: str = Form(...), contact: str = Form(...), org: str = Form(""),
+                    area: str = Form(""), note: str = Form(""), consent: str = Form("")):
+    from fastapi.responses import RedirectResponse
+    if consent != "yes" or not name.strip() or not contact.strip():
+        raise HTTPException(400, "Please fill in your name and contact, and tick the consent box.")
+    kinds = {"ngo", "vet", "municipal", "police", "community", "volunteer", "other"}
+    with _lock, SessionLocal() as s:
+        s.add(PartnerLead(name=name.strip()[:80], org=org.strip()[:120] or None, kind=kind if kind in kinds else "other",
+                          contact=contact.strip()[:120], area=area.strip()[:80] or None, note=note.strip()[:800] or None))
+        s.commit()
+    return RedirectResponse("/partners?sent=1#main", status_code=303)
 
 
 def city_view() -> dict:
@@ -194,6 +270,13 @@ def city_view() -> dict:
             "notch_pct": round(100 * notched / len(dogs)) if dogs else 0, "notched": notched,
             "checkins_7d": s.scalar(select(func.count()).select_from(CheckIn).where(CheckIn.created >= _now() - td(days=7))) or 0,
             "cases": len(cases), "closed": sum(1 for c in cases if c.status == "closed"),
+            "high": sum(1 for c in cases if c.level == "HIGH"), "check": sum(1 for c in cases if c.level == "CHECK"),
+            "low": sum(1 for c in cases if c.level == "LOW"),
+            "dispatched": sum(1 for c in cases if c.status != "logged"),
+            "proofed": sum(1 for c in cases if c.status == "closed" and c.proof_photo_id),
+            "proof_pct": round(100 * sum(1 for c in cases if c.status == "closed" and c.proof_photo_id) /
+                               max(1, sum(1 for c in cases if c.status == "closed"))),
+            "camera_cases": sum(1 for c in cases if c.source == "camera"),
             "assigned": sum(1 for c in cases if c.status in ("assigned", "closed")),
             "unanswered": sum(1 for c in cases if c.status == "unanswered"),
             "median_accept": round(acc[len(acc) // 2], 1) if acc else None,
@@ -205,7 +288,9 @@ def city_view() -> dict:
 
 @app.get("/city", response_class=HTMLResponse)
 def city(request: Request):
-    return templates.TemplateResponse(request, "city.html", {"c": city_view()})
+    with SessionLocal() as s:
+        hot = engine.hotspot_actions(s)
+    return page(request, "city.html", "/city", c=city_view(), hotspots=hot)
 
 
 @app.get("/app", response_class=HTMLResponse)
@@ -250,9 +335,96 @@ def poster(request: Request, code: str):
             raise HTTPException(404, "Poster not found")
         card = post_card(p)
     seen_link = (f"https://wa.me/{config.WA_DISPLAY_NUMBER}?text=SEEN%20{card['code']}" if config.WA_DISPLAY_NUMBER
-                 else f"/?seen={card['code']}#try")
+                 else f"/app?seen={card['code']}")
     return templates.TemplateResponse(request, "poster.html", {"p": card, "seen_link": seen_link,
                                                                "base": config.PUBLIC_BASE_URL})
+
+
+AGENT_LABELS = {"Triage": "Triage agent", "Rules": "Urgency rules (code)", "Dispatch": "Dispatch agent",
+                "Watch": "Watch agent", "Identify": "Identify agent", "Camera": "Camera agent",
+                "Hotspot": "Hotspot agent", "Person": "Person"}
+STATUS_WORDS = {"alerting": "Finding help", "assigned": "Help on the way", "closed": "Safe · closed",
+                "unanswered": "No responder free yet", "logged": "Logged"}
+
+
+def ist_str(dt) -> str:
+    return engine.ist(dt)
+
+
+def case_view(s, c: Case) -> dict:
+    """What a case looks like to people: plain words, no phone numbers, area rounded to ~1 km."""
+    from . import rules
+    t = c.triage or {}
+    helper = s.get(User, c.assigned_to) if c.assigned_to else None
+    who = None
+    if helper:
+        team, is_ct = engine.responder_label(s, c, helper.id)
+        who = "The animal's caretaker" if is_ct else (helper.org or rules.TEAM_LABELS.get(team, "A helper").capitalize())
+    head, nxt = {
+        "alerting": ("Finding help now", f"Responder #{len(c.asked or [])} has been alerted. If they can't reply in "
+                                          f"{engine.hop_words(c)}, StrayWatch asks the next one by itself."),
+        "assigned": ("Help is on the way 🚶", f"{who or 'A responder'} accepted. Please stay at a safe distance until they arrive."),
+        "closed": ("The animal is safe 🎉", "Thank you for reporting. You made this happen."),
+        "unanswered": ("No responder is free yet", "Please call the government animal ambulance on 1962. StrayWatch keeps "
+                                                   "the case open and alerts new responders nearby."),
+        "logged": ("Logged, no rescue needed", "It was off the road and not hurt, so nobody was disturbed. It's on the "
+                                              "hotspot map. If it gets worse, tell StrayWatch in the chat."),
+    }.get(c.status, ("Case", ""))
+    return {"code": f"SW-{c.id}", "id": c.id, "level": c.level or "HIGH",
+            "level_words": engine.LEVEL_WORDS.get(c.level or "HIGH", "URGENT"), "status": c.status,
+            "status_words": STATUS_WORDS.get(c.status, c.status), "species": (t.get("species") or "animal").title(),
+            "summary": t.get("summary", ""), "created": ist_str(c.created), "headline": head, "next": nxt,
+            "area": f"near {round(c.lat, config.PUBLIC_COORD_DECIMALS)}, {round(c.lon, config.PUBLIC_COORD_DECIMALS)}",
+            "photo": f"/photo/{c.photo_id}" if c.photo_id else None,
+            "proof": f"/photo/{c.proof_photo_id}" if c.proof_photo_id else None, "proof_note": c.proof_note,
+            "reasons": c.reasons or [], "teams": [rules.TEAM_LABELS.get(x, x) for x in (c.teams or [])],
+            "source": c.source or "citizen", "reports": c.merged_reports or 1, "who": who,
+            "minutes_to_accept": round((c.accepted_at - c.created).total_seconds() / 60, 1) if c.accepted_at else None}
+
+
+def case_events(s, c: Case, public_only=True) -> list[dict]:
+    q = select(CaseEvent).where(CaseEvent.case_id == c.id).order_by(CaseEvent.id)
+    from datetime import timedelta as td
+    return [{"at": (e.created + td(hours=5, minutes=30)).strftime("%d %b, %H:%M:%S") if not public_only else ist_str(e.created), "agent": e.agent,
+             "agent_label": AGENT_LABELS.get(e.agent, e.agent), "kind": e.kind, "detail": e.detail}
+            for e in s.scalars(q) if e.public or not public_only]
+
+
+@app.get("/api/room")
+def api_room():
+    """Agent Room board: recent cases (no names or numbers, areas rounded) and agent activity in the last 24 h."""
+    from datetime import timedelta as td
+    from .db import now as _now
+    with SessionLocal() as s:
+        cases = list(s.scalars(select(Case).order_by(Case.id.desc()).limit(40)))
+        since = _now() - td(days=1)
+        counts = dict(s.execute(select(CaseEvent.agent, func.count()).where(CaseEvent.created >= since)
+                                .group_by(CaseEvent.agent)).all())
+        return {"cases": [case_view(s, c) for c in cases], "agents": counts}
+
+
+@app.get("/api/room/case/{cid}")
+def api_room_case(cid: int):
+    with SessionLocal() as s:
+        c = s.get(Case, cid)
+        if not c:
+            raise HTTPException(404)
+        return {"case": case_view(s, c), "events": case_events(s, c, public_only=False)}
+
+
+@app.get("/track/{code}", response_class=HTMLResponse)
+def track(request: Request, code: str, k: str = ""):
+    """The reporter's private tracking page (link sent in the chat)."""
+    try:
+        cid = int(code.upper().removeprefix("SW-"))
+    except ValueError:
+        raise HTTPException(404, "Case not found")
+    with SessionLocal() as s:
+        c = s.get(Case, cid)
+        if not c or not c.track_key or not secrets.compare_digest(k, c.track_key):
+            raise HTTPException(404, "Case not found")
+        return templates.TemplateResponse(request, "track.html", {"c": case_view(s, c), "events": case_events(s, c),
+                                                                  "active": None})
 
 
 @app.get("/photo/{pid}")
@@ -295,6 +467,65 @@ async def chat(request: Request, response: Response, text: str = Form(""), butto
     inc = engine.Incoming(text=text[:1000], image=img or None, lat=lat, lon=lon, button=button[:120] or None)
     msgs = await asyncio.to_thread(run_turn, uid, inc, uid)
     return {"messages": msgs, "me": uid}
+
+
+# ------------------------------------------------------------------ agent protocol (edge agents → Agent Room)
+
+def _camera_event(ev: dict) -> dict:
+    import base64
+    cam_id = str(ev.get("camera_id", ""))
+    if cam_id not in engine.CAMERAS:
+        raise HTTPException(400, "unknown camera")
+    try:
+        img = base64.b64decode(ev.get("snapshot_jpeg_b64", ""), validate=True)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "bad snapshot")
+    if not img or len(img) > 4 * 1024 * 1024:
+        raise HTTPException(400, "snapshot missing or too large")
+    with _lock, SessionLocal() as s:
+        try:
+            case, outs = engine.camera_case(s, cam_id, ev, img)
+            deliver(s, outs)
+            s.commit()
+        except Exception:
+            s.rollback()
+            log.exception("camera event failed")
+            raise HTTPException(500, "could not open a case")
+        return {"case": f"SW-{case.id}" if case else None, "level": case.level if case else None,
+                "status": case.status if case else None,
+                "summary": f"SW-{case.id} · {case.level} · {case.status}" if case else "no case"}
+
+
+@app.post("/api/agents/camera/events")
+async def camera_event(request: Request):
+    """Edge Camera agents post here (deck: agent protocol over REST). Needs X-Agent-Key unless in demo mode."""
+    key = request.headers.get("X-Agent-Key", "")
+    if config.AGENT_KEY:
+        if not secrets.compare_digest(key, config.AGENT_KEY):
+            raise HTTPException(401, "bad agent key")
+    elif not config.DEMO_MODE:
+        raise HTTPException(401, "set SW_AGENT_KEY to accept camera events")
+    ev = await request.json()
+    return await asyncio.to_thread(_camera_event, ev)
+
+
+@app.post("/api/agents/camera/replay")
+async def camera_replay():
+    """Demo only: replay an event the edge agent really produced on recorded footage (data/camera_samples)."""
+    if not config.DEMO_MODE:
+        raise HTTPException(404)
+    sample = HERE.parent / "data" / "camera_samples" / "event_1.json"
+    if not sample.exists():
+        raise HTTPException(404, "no recorded sample")
+    import json as _json
+    return await asyncio.to_thread(_camera_event, _json.loads(sample.read_text()))
+
+
+@app.get("/api/signboards")
+def api_signboards():
+    """JSON feed for roadside signboards near hotspot cameras."""
+    with SessionLocal() as s:
+        return {"boards": engine.signboards(s)}
 
 
 @app.get("/api/inbox")

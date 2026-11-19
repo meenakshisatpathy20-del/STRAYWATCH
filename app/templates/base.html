@@ -1,0 +1,50 @@
+{% import "_doodles.html" as d %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}StrayWatch{% endblock %}</title>
+<meta name="description" content="{% block desc %}StrayWatch: an AI dispatch network for stray cows and dogs on Indian roads. Report with one photo; the right responder is alerted in minutes.{% endblock %}">
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#FFD23F">
+<meta property="og:image" content="/static/welcome.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&family=Gochi+Hand&family=Noto+Sans+Bengali:wght@600&family=Noto+Sans+Devanagari:wght@600&family=Noto+Sans+Tamil:wght@600&family=Noto+Sans+Telugu:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+{% block head %}{% endblock %}
+</head>
+<body class="shell">
+<a class="skip" href="#main">Skip to content</a>
+<header class="topbar">
+  <a class="logo" href="/">{{ d.dog(36) }}<span>StrayWatch</span></a>
+  <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sidebar">☰ Menu</button>
+</header>
+<aside class="sidebar" id="sidebar" aria-label="Site sections">
+  <a class="logo side-logo" href="/">{{ d.dog(40) }}<span>StrayWatch</span></a>
+  <a class="btn coral report-btn" href="/app">🚨 Report an animal</a>
+  {% set nav = [
+    ("Start here", [("/", "🏠", "Overview"), ("/demo", "📱", "Live demo"), ("/how", "🧭", "How it works")]),
+    ("For citizens", [("/app", "🐾", "Open the app"), ("/lost", "🔎", "Lost & Found"), ("/vet", "🩺", "Vet care")]),
+    ("For responders & city", [("/room", "🤖", "Agent Room"), ("/camera", "🎥", "Camera AI"), ("/city", "🏙️", "City dashboard"), ("/partners", "🤝", "Join as a partner")]),
+    ("About", [("/docs", "📄", "Tech docs & status"), ("/promise", "💛", "Safety & privacy")]),
+  ] %}
+  {% for group, items in nav %}
+  <div class="side-group">{{ group }}</div>
+  {% for href, icon, label in items %}
+  <a class="side-link{% if active == href %} on{% endif %}" href="{{ href }}"{% if active == href %} aria-current="page"{% endif %}><span aria-hidden="true">{{ icon }}</span>{{ label }}</a>
+  {% endfor %}
+  {% endfor %}
+  <div class="side-foot">If a person is hurt, call <b>112</b>.<br>Animal ambulance (govt.): <b>1962</b></div>
+</aside>
+<main class="content" id="main">
+{% block content %}{% endblock %}
+<footer class="site-foot">StrayWatch · built in Ranchi by Meenakshi Satpathy, BIT Mesra · Prasunex Innovathon 2026 · <a href="/promise">Safety &amp; privacy</a> · Sample data is marked “Sample”.</footer>
+</main>
+<script>
+(function(){const b=document.getElementById("menuBtn"),s=document.getElementById("sidebar");
+b.addEventListener("click",()=>{const o=s.classList.toggle("open");b.setAttribute("aria-expanded",o);});})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

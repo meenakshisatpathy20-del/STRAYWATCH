@@ -31,6 +31,8 @@ class User(Base):
     lon: Mapped[float | None] = mapped_column(Float)
     state: Mapped[dict] = mapped_column(JSON, default=dict)
     trust: Mapped[int] = mapped_column(Integer, default=0)  # +1 confirmed useful report, -1 rejected
+    role: Mapped[str | None] = mapped_column(String(20))  # responder team: ngo|vet|municipal_cattle|abc|police|coordinator
+    org: Mapped[str | None] = mapped_column(String(80))   # e.g. "Ranchi Municipal Corporation cattle team"
     last_seen: Mapped[datetime] = mapped_column(DateTime, default=now)
     created: Mapped[datetime] = mapped_column(DateTime, default=now)
 
@@ -88,6 +90,26 @@ class Case(Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime)
     status: Mapped[str] = mapped_column(String(20), default="alerting")  # alerting|assigned|closed|unanswered|rejected
     merged_reports: Mapped[int] = mapped_column(Integer, default=1)
+    level: Mapped[str | None] = mapped_column(String(8))           # HIGH | CHECK | LOW (rules.py)
+    reasons: Mapped[list] = mapped_column(JSON, default=list)       # why the rules chose that level
+    teams: Mapped[list] = mapped_column(JSON, default=list)         # teams asked, in order
+    hop_minutes: Mapped[int | None] = mapped_column(Integer)        # minutes each responder gets
+    source: Mapped[str | None] = mapped_column(String(12))          # citizen | camera
+    track_key: Mapped[str | None] = mapped_column(String(16))       # secret for the reporter's tracking link
+    proof_photo_id: Mapped[str | None] = mapped_column(String(24))
+    proof_note: Mapped[str | None] = mapped_column(Text)
+    created: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
+class CaseEvent(Base):
+    """The case ledger: every agent hand-off and human action, in order. Replayable (deck slide 8)."""
+    __tablename__ = "case_events"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    case_id: Mapped[int] = mapped_column(Integer, index=True)
+    agent: Mapped[str] = mapped_column(String(30))   # Triage | Identify | Dispatch | Watch | Camera | Hotspot | Person
+    kind: Mapped[str] = mapped_column(String(30))    # reported | triaged | ruled | alerted | accepted | ...
+    detail: Mapped[str] = mapped_column(Text)
+    public: Mapped[bool] = mapped_column(Boolean, default=True)  # shown on the reporter's tracking page
     created: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 
@@ -147,6 +169,19 @@ class Trace(Base):
     created: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 
+class PartnerLead(Base):
+    """Someone who asked to partner (NGO, vet, municipal team, page, volunteer). Stored with consent, only to follow up."""
+    __tablename__ = "partner_leads"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    org: Mapped[str | None] = mapped_column(String(120))
+    kind: Mapped[str] = mapped_column(String(20))
+    contact: Mapped[str] = mapped_column(String(120))
+    area: Mapped[str | None] = mapped_column(String(80))
+    note: Mapped[str | None] = mapped_column(Text)
+    created: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
 class TranslationCache(Base):
     __tablename__ = "translations"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -160,6 +195,21 @@ SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 def init_db() -> None:
     Base.metadata.create_all(engine)
+    _add_missing_columns()
+
+
+def _add_missing_columns() -> None:
+    """create_all() never changes existing tables, so add new nullable columns to a live database by hand."""
+    from sqlalchemy import inspect, text
+    insp = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not insp.has_table(table.name):
+                continue
+            have = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name not in have:
+                    conn.execute(text(f'ALTER TABLE {table.name} ADD COLUMN {col.name} {col.type.compile(engine.dialect)}'))
 
 
 def km(lat1, lon1, lat2, lon2) -> float:

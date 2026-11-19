@@ -71,12 +71,13 @@ def test_sos_alerts_nearest_helper_and_escalates(s, monkeypatch):
     talk(s, "web:r", button="m:sos")
     talk(s, "web:r", image=photo())
     out = talk(s, "web:r", lat=LALPUR[0], lon=LALPUR[1])
-    assert "URGENT" in texts(out, "web:r")
+    assert "Needs a check" in texts(out, "web:r"), "injured but off the road = CHECK (deck slide 7)"
+    assert "/track/SW-" in (out[0].link or ""), "the reporter gets a tracking link"
     first = [o for o in out if o.to == "demo:a"]
     assert first and first[0].buttons[0][0].startswith("case:go")
     assert not [o for o in out if o.to == "demo:far"], "helpers beyond the radius must not be alerted"
     case = s.query(Case).one()
-    case.alerted_at = now() - timedelta(minutes=5)  # nobody answered in time
+    case.alerted_at = now() - timedelta(minutes=11)  # nobody answered in time
     s.commit()
     out = engine.escalate_due(s)
     assert any(o.to == "demo:b" for o in out), "should move on to the next helper"

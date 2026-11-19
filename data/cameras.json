@@ -1,0 +1,16 @@
+{
+  "_note": "Hotspot cameras the Camera agent watches. Lane polygons are fractions of the frame (x, y). In the pilot these come from the Ranchi Smart City ICCC; the entries below are SAMPLES for the demo.",
+  "cameras": {
+    "ratu-rd-01": {
+      "name": "Sample camera · Ratu Road junction",
+      "lat": 23.3905, "lon": 85.3050, "road_type": "main",
+      "lane": [[0.0, 0.50], [1.0, 0.44], [1.0, 1.0], [0.0, 1.0]],
+      "footage_note": "Demo footage: 'Stray Cattle in Lutyens Delhi' (Fowler&fowler, CC BY-SA 3.0, Wikimedia Commons), played as if from this sample camera."
+    },
+    "kanke-rd-02": {
+      "name": "Sample camera · Kanke Road",
+      "lat": 23.3950, "lon": 85.3200, "road_type": "main",
+      "lane": [[0.0, 0.45], [1.0, 0.45], [1.0, 1.0], [0.0, 1.0]]
+    }
+  }
+}
