@@ -102,7 +102,7 @@ class Case(Base):
 
 
 class CaseEvent(Base):
-    """The case ledger: every agent hand-off and human action, in order. Replayable (deck slide 8)."""
+    """The case ledger: every agent hand-off and human action, in order. Replayable."""
     __tablename__ = "case_events"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     case_id: Mapped[int] = mapped_column(Integer, index=True)
@@ -158,7 +158,7 @@ class Outbox(Base):
 
 
 class Trace(Base):
-    """Every AI and decision step, so people (and judges) can see how StrayWatch decided."""
+    """Every AI and decision step, so people can see how StrayWatch decided."""
     __tablename__ = "trace"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[str] = mapped_column(String(80), index=True)

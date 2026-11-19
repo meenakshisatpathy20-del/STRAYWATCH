@@ -1,4 +1,4 @@
-"""Urgency and routing rules: plain, unit-tested code (deck slide 7: "AI reads and compares; tested rules decide").
+"""Urgency and routing rules: plain, unit-tested code ("AI reads and compares; tested rules decide").
 
 The AI only fills in facts (species, injured?, on the road?, blocking a lane?). These functions turn facts into
 an urgency level and the teams to ask, the same way every time: same input -> same urgency.
@@ -25,7 +25,7 @@ TEAM_LABELS = {
     "coordinator": "duty coordinator",
 }
 
-# Minutes each responder gets before the Watch agent asks the next one (deck slide 5: 3-10 min per hop).
+# Minutes each responder gets before the Watch agent asks the next one (3-10 min per hop).
 HOP_MINUTES = {HIGH: 3, CHECK: 10, LOW: 0}
 
 

@@ -1,4 +1,4 @@
-"""Demo data so the website works for judges without real people.
+"""Demo data so the website can be tried without real people.
 
 Everything seeded here is clearly marked as sample data on the site. Photos are openly licensed (see
 data/demo_photos/credits.json). Locations are around Ranchi, where StrayWatch started.
@@ -51,7 +51,7 @@ def make_samples():
             out.write_bytes(photos.normalise(data))
 
 
-# Sample responder teams (deck slide 2: "caretaker first, then the nearest right team"). All clearly marked "Sample".
+# Sample responder teams ("caretaker first, then the nearest right team"). All clearly marked "Sample".
 RESPONDERS = [
     ("demo:ngo", "Sample NGO rescue team", "ngo", "en", (23.3690, 85.3250)),
     ("demo:vet", "Sample partner vet clinic", "vet", "hi", (23.3600, 85.3350)),

@@ -2,7 +2,7 @@
 {% block title %}Tech docs &amp; status · StrayWatch{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div class="hand">for judges, partners and developers</div>
+  <div class="hand">for partners and developers</div>
   <h1>Tech docs &amp; status</h1>
   <p>What StrayWatch is built from, what works today, what doesn't yet, and what comes next. Source code: <a href="https://github.com/meenakshisatpathy20-del/straywatch">github.com/meenakshisatpathy20-del/straywatch</a>.</p>
 </div>
@@ -32,7 +32,8 @@
       <thead><tr><th>Feature</th><th>Status</th><th>Notes</th></tr></thead>
       <tbody>
         {% for f, st, note in [
-          ("Citizen reporting (photo or words, 6 languages)", "Working", "Live web app; Hinglish understood; no sign-up"),
+          ("Citizen reporting (photo, words or a typed landmark)", "Working", "No sign-up; GPS blocked → landmark confirmed on the map; offline queue; photos shrunk on the phone"),
+          ("6 languages end to end", "Working", "English, Hindi, Bengali, Tamil, Telugu, Marathi: app labels, chat, rules (words in each script), tracking page, posters; pre-translated fixed messages"),
           ("Triage + Identify agents", "Working", "Vision LLM, strict JSON validated field by field; caretaker first at 95%+"),
           ("Urgency rules: URGENT / NEEDS CARE / NO CASE", "Working", "Hurt on the road = URGENT; healthy animals are never dispatched; unit-tested"),
           ("Right-team routing", "Working", "Caretaker → rescue NGO → vet → municipal team (cows, dead animals) → police on busy roads → volunteers (sample teams)"),
@@ -43,8 +44,11 @@
           ("Hotspot agent + signboard feed", "Working", "Where animals keep getting hurt, by road and hour; driver warnings while an injured animal is on the road"),
           ("Lost & Found", "Working", "Searches past and future sightings nearby"),
           ("WhatsApp add-on", "Built", "Tested with simulated webhooks; waiting on Meta verification"),
-          ("Vet care", "In progress", "1962 + find a vet live; health check, nutrition, vet handover next"),
+          ("Vet Care: online verified vets", "Working", "AI pre-check + reviewed care card, emergencies to 1962/clinic, live translated chat, video link, vet's note, follow-up; vet sign-up + verification"),
+          ("Phone notifications", "Working", "Web Push to responders and reporters with the app closed"),
+          ("Map view", "Working", "Cases, injury hotspots, cameras; locations rounded to ~1 km"),
           ("SMS / IVR, Telegram", "Planned", "Same channel adapter"),
+          ("Payments for paid pet consults", "Planned", "Free during the pilot; UPI later"),
           ("Redis event bus, PostGIS", "Planned for scale", "Today: in-process events, bounding box + haversine distance"),
         ] %}
         <tr><td><b>{{ f }}</b></td><td><span class="pill {{ 'LOW' if st.startswith('Working') else ('CHECK' if st in ('Built','In progress') else 's-logged') }}">{{ st }}</span></td><td>{{ note }}</td></tr>
@@ -80,10 +84,10 @@
 <section>
   <div class="section-title"><h2>What comes next</h2></div>
   <ol class="flow">
-    <li><span class="n">1</span><b>Vet care</b><p>Health check with vet-reviewed cards, nutrition, vet handover summary.</p></li>
-    <li><span class="n">2</span><b>Voice notes</b><p>Report by speaking Hindi or any of the 6 languages.</p></li>
-    <li><span class="n">3</span><b>Ranchi pilot</b><p>2 wards, 1 NGO, municipal cattle team, 5 hotspot cameras via ICCC. 3 months.</p></li>
-    <li><span class="n">4</span><b>Scale</b><p>A new city is configuration: responders, ward boundaries, escalation rules, languages.</p></li>
+    <li><span class="n">1</span><b>Real partners</b><p>An NGO, the municipal team and 3–5 vets in two Ranchi wards; vet cards reviewed by a partner vet.</p></li>
+    <li><span class="n">2</span><b>Ranchi pilot</b><p>3 months, with hotspot cameras via the Smart City ICCC. Measure time to help and repeat injuries.</p></li>
+    <li><span class="n">3</span><b>More channels</b><p>WhatsApp live (Meta verification), then SMS / missed-call for feature phones.</p></li>
+    <li><span class="n">4</span><b>Scale</b><p>A new city is configuration: responders, vets, ward boundaries, languages.</p></li>
   </ol>
 </section>
 
@@ -96,6 +100,8 @@
       <tr><td><code>POST /api/agents/camera/events</code></td><td>Edge Camera agent event (X-Agent-Key). Opens or merges a case.</td></tr>
       <tr><td><code>GET /api/room</code></td><td>Agent Room board: recent cases and agent activity.</td></tr>
       <tr><td><code>GET /api/signboards</code></td><td>Driver warnings for display boards near cameras.</td></tr>
+      <tr><td><code>GET /api/map</code></td><td>Map layers (rounded to ~1 km).</td></tr>
+      <tr><td><code>POST /vet/join</code> · <code>/admin/vets</code></td><td>Vet sign-up, and registration checks (admin key).</td></tr>
       <tr><td><code>POST /webhook/whatsapp</code></td><td>WhatsApp Cloud API webhook (signature checked).</td></tr>
       <tr><td><code>GET /track/SW-n?k=…</code></td><td>The reporter's private tracking page.</td></tr>
     </tbody>

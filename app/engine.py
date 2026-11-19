@@ -910,7 +910,7 @@ def hotspot_actions(s, days: int = 30) -> list[dict]:
 
 
 def signboards(s) -> list[dict]:
-    """Driver warnings for roadside signboards: no app needed (deck slide 2). One entry per camera."""
+    """Driver warnings for roadside signboards: no app needed. One entry per camera."""
     out = []
     for cam_id, cam in CAMERAS.items():
         open_cases = [c for d, c in nearby(s, Case, cam["lat"], cam["lon"], 0.5)
