@@ -795,9 +795,10 @@ def case_button(s, u: User, b: str) -> list[Out]:
             return [Out(u.id, "Thanks for letting me know. 💛")]
         busy = c.assigned_to or c.current_helper
         c.status, c.closed_at, c.queue, c.current_helper = "cancelled", now(), [], None
-        ledger(s, c, "Person", "cancelled", "The reporter says the animal has gone or it was a false alarm. "
-                                            "Responders were told to stand down.", trace_title="Case cancelled")
-        outs = [Out(u.id, f"Okay, I've closed case SW-{c.id} and told the responder. Thank you for caring. 💛")]
+        ledger(s, c, "Person", "cancelled", "The reporter says the animal has gone or it was a false alarm."
+                                            + (" Responders were told to stand down." if busy else ""), trace_title="Case cancelled")
+        told = " and told the responder" if busy else ""
+        outs = [Out(u.id, f"Okay, I've closed case SW-{c.id}{told}. Thank you for caring. 💛")]
         if busy:
             outs.append(Out(busy, f"ℹ️ Case SW-{c.id} is cancelled: the reporter says the animal has gone. "
                                   "No need to go. Thank you! 🙏"))
