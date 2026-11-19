@@ -2,187 +2,143 @@
 
 # 🐾 StrayWatch
 
-**Every street friend, known and cared for.** A free, installable mobile web app for the people who look after India's
-community dogs and cows, with an optional WhatsApp add-on, powered by the **BharatCode model API**.
+**Help for every injured animal, a vet for every animal, and fewer accidents on our roads.**
 
-> Send one photo. StrayWatch remembers the animals on your street, gets help in minutes when one is hurt, and helps
-> lost cows and dogs find their way home, in English, हिंदी, বাংলা, தமிழ், తెలుగు or मराठी.
+Every day on Indian roads, stray and community animals are hit, injured or fall sick, and help reaches them late.
+People don't know whom to call; rescuers and vets find out without a photo or an exact location; nobody owns the case.
+And an injured animal lying on the road becomes the next accident. StrayWatch fixes that: **send one photo (or a few
+words, in your language) and the right responder nearby is alerted in seconds**, with every step tracked until the
+animal is safe. Pet owners and caretakers can also **talk to a verified vet online**.
 
-🌐 **Live: [straywatch-0h6w.onrender.com](https://straywatch-0h6w.onrender.com)** · 📱 **[Open the app](https://straywatch-0h6w.onrender.com/app)** · 🏙️ [City view](https://straywatch-0h6w.onrender.com/city) · 🧪 `11 tests passing`
+🌐 **Live: [straywatch-0h6w.onrender.com](https://straywatch-0h6w.onrender.com)** · 📱 **[Open the app](https://straywatch-0h6w.onrender.com/app)** ·
+🎬 [Live demo](https://straywatch-0h6w.onrender.com/demo) · 🤖 [Agent Room](https://straywatch-0h6w.onrender.com/room) ·
+🩺 [Vet care](https://straywatch-0h6w.onrender.com/vet) · 📄 [Tech docs & status](https://straywatch-0h6w.onrender.com/docs)
 
 > The free server sleeps when idle, so the first visit can take up to a minute to wake up.
->
-> **Status:** the app and website run live: open [/app](https://straywatch-0h6w.onrender.com/app) on a phone and
-> "Add to home screen". The WhatsApp add-on is built and tested with simulated Meta webhooks; going live on a WhatsApp
-> number is waiting on Meta business verification.
-
-
-## Round 3 prototype: what's new
-
-| Page | What it shows |
-|---|---|
-| [`/`](https://straywatch-0h6w.onrender.com/) | Overview: the gap, Detect · Respond · Prevent, live counts |
-| [`/demo`](https://straywatch-0h6w.onrender.com/demo) | Two phones: a citizen reports, a responder (caretaker, cattle team, NGO, volunteer, coordinator) gets the alert |
-| [`/room`](https://straywatch-0h6w.onrender.com/room) | **Agent Room**: every case and its ledger, live, with agent activity |
-| [`/camera`](https://straywatch-0h6w.onrender.com/camera) | **Camera agent** results, real camera event replay, signboard preview |
-| [`/city`](https://straywatch-0h6w.onrender.com/city) | City dashboard with the **Hotspot agent** (“cattle team to Ratu Road around 5 PM”) |
-| [`/docs`](https://straywatch-0h6w.onrender.com/docs) | Technical docs, implemented features, limitations, future plans |
-
-- **Urgency rules** (`app/rules.py`): HIGH / CHECK / LOW as plain, unit-tested code; the AI only fills in facts.
-- **Right-team routing**: caretaker → NGO / vet / municipal cattle team / ABC team / traffic police → volunteers → duty coordinator; 3 min per hop for HIGH, 10 min for CHECK.
-- **Photo-proof closing** checked by AI; the reporter sees the proof photo.
-- **Case ledger** (`CaseEvent`) and a private **tracking link** for every reporter (`/track/SW-n?k=…`).
-- **Camera agent at the edge** (`edge/camera_agent.py`): YOLOv8n + ByteTrack, dwell and still timers, posts to `/api/agents/camera/events`.
-- **Signboard feed** (`/api/signboards`) and partner sign-up (`/partners`).
 
 ---
 
-## Why
-
-On my way to college in Ranchi I see it every day: a dog limping near a signal, a cow standing in the middle of the
-main road at night. People here care, and every street has someone who feeds these animals. But when something goes
-wrong, **nobody knows whom to call**, help arrives late, and a cow that wandered off is never found.
-
-| | |
-|---|---|
-| **1.53 crore** street dogs and **~50 lakh** stray cattle in India | [20th Livestock Census, 2019 (PIB)](https://pib.gov.in/PressReleasePage.aspx?PRID=1813802) |
-| **37 lakh** dog-bite cases reported in 2024 | [NCDC data via Lok Sabha reply](https://www.dailyexcelsior.com/?p=2029854) |
-| Dogs **69%** and cattle **21%** of stray-animal road-crash cases at one trauma centre | [J Emerg Trauma Shock, 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8054802) |
-
-Rescue apps wait for an emergency, so people install them once and forget them. **StrayWatch builds the community
-before the emergency**: caretakers use it daily for the animals they already feed, and that daily habit is what
-makes rescue fast and lost animals findable.
-
 ## What it does
 
-| | For whom | What happens |
+| | What happens |
+|---|---|
+| 🚨 **Rescue** | A citizen sends a photo, a few words or a typed landmark; a road camera can also spot an animal **lying** in a lane. The AI reads it, **tested rules** set the urgency, and the right responder is alerted: the animal's caretaker first, then a rescue NGO and a vet; the municipal cattle team for cows; traffic police to guard the spot on busy roads. No reply? It moves on by itself, then to the duty coordinator. Closed only with a **photo proof** the AI checks. The reporter follows every step on a private tracking link. |
+| 🩺 **Vet care** | For a pet or a street animal: a short AI pre-check prepares a **one-page summary for the vet**, shows a **vet-reviewed care card** (what to do now, what not to do), and sends emergencies to a clinic or the government animal ambulance **1962** first. Then a **verified vet** joins a live chat (each side reads in their own language, photos, a video link), writes a note, and StrayWatch checks in after 2 days. Food guide and “Can I feed this?” included. |
+| 🛣️ **Fewer accidents** | Signboard warnings for drivers while an injured animal is on the road; a **Hotspot agent** finds where animals keep getting hurt, by road and hour, so the city can add lights, speed breakers or signs. |
+| 🔎 **Lost & Found** | A lost cow or dog is matched against every photo people sent nearby, and every new one; bilingual posters never show the owner's number. |
+
+**Scope:** healthy animals standing, eating or wandering are **not** cases: nobody is sent, and StrayWatch never removes
+healthy strays. It follows the Animal Birth Control Rules, 2023.
+
+## Urgency rules (plain code, unit-tested)
+
+| Level | When | Who is asked |
 |---|---|---|
-| 🐶 **My Animals** | Feeders and caretakers, **daily** | One photo makes a profile (colour, markings, sterilisation ear-notch). A photo at feeding time is **recognised as the right animal**, logged in a health diary, compared with the last photo for visible changes, with rabies-vaccine reminders. |
-| 🚨 **Rescue SOS** | Anyone who sees a hurt animal | Photo (or words at night) + location → AI triage → if it's a registered animal, **its caretaker is alerted first**, then the nearest volunteers. **No reply in 3 minutes → it moves on by itself** and keeps the reporter updated. Safety-first first aid with sources. |
-| 🔎 **Lost & Found** | Cattle and dog owners | Post a photo → the AI **searches every photo people sent nearby**, checks each new one against open posters, and pings the owner on a match. A shareable public poster never shows the owner's number or exact spot. |
+| 🔴 **URGENT** (3 min per responder) | Injured, sick, trapped or lying animal **on the road** · dead animal on the road · trapped anywhere | Caretaker → rescue NGO → vet → municipal cattle team (cows) → traffic police (busy road) → volunteers → duty coordinator |
+| 🟡 **Needs care** (10 min per responder) | Injured or sick off the road · lying in a lane, condition unclear | Same order |
+| ⚪ **No case** | Healthy animal, on the road or not | Nobody; counted for the traffic map only |
 
-It's a **mobile web app** that opens in any phone browser and installs to the home screen like a normal app, with no
-app store. The same assistant can also be reached through an optional **WhatsApp add-on**. The **website** has a guided
-demo with a live view of every AI step and a second phone showing the caretaker's side. A **City view** turns the same data
-into where NGOs and municipalities should act: vaccination and sterilisation coverage, response times, and cattle
-hotspots on roads.
-
+The AI only fills in facts (species, hurt?, on the road?, lying?). The person on the spot always wins: if they say it's
+hurt, it's treated as hurt; if the photo is unclear, StrayWatch asks instead of guessing.
 
 ## Screenshots
 
-<p align="center"><img src="docs/screenshots/8-app-on-phone.jpg" alt="The StrayWatch app on a phone, in Hindi: chat, lost and found, and more tabs" width="820"><br><b>The app on a phone</b> (installable from the browser, shown in Hindi)</p>
-
 | | |
 |---|---|
-| ![Homepage](docs/screenshots/1-home.jpg) | ![Try it: SOS, caretaker alerted in Hindi](docs/screenshots/4-try-it-sos-caretaker-hindi.jpg) |
-| **Homepage** | **Try it:** a Hinglish SOS; the caretaker's phone gets the alert in Hindi, and every AI step is shown |
-| ![Why StrayWatch](docs/screenshots/2-why-straywatch.jpg) | ![How a rescue works](docs/screenshots/3-how-a-rescue-works.jpg) |
-| **Why today's options fall short** | **How a rescue works**, with measured timings |
-| ![Lost & Found board](docs/screenshots/5-lost-and-found.jpg) | ![City view](docs/screenshots/6-city-view.jpg) |
-| **Lost & Found board** | **City view** for NGOs and municipalities |
+| ![Overview](docs/screenshots/01-overview.jpg) | ![Live demo: SOS](docs/screenshots/02-demo-sos.jpg) |
+| **Overview** | **Live demo:** a Hinglish SOS; the responder's phone gets the alert |
+| ![Vet consult](docs/screenshots/03-vet-consult.jpg) | ![Agent Room](docs/screenshots/04-agent-room.jpg) |
+| **Vet consult:** pre-check, care card, a verified vet joins | **Agent Room:** every case and its ledger, live |
+| ![City map](docs/screenshots/05-city-map.jpg) | ![Camera AI](docs/screenshots/06-camera-ai.jpg) |
+| **City dashboard:** map, injury hotspots | **Camera AI** and driver signboards |
 
-<p align="center"><img src="docs/screenshots/7-lost-poster-mobile.jpg" alt="Public lost poster on a phone" width="300"><br><b>Shareable lost poster</b> (no phone number, no exact spot)</p>
+<p align="center">
+<img src="docs/screenshots/07-app-hindi.jpg" alt="The app in Hindi" width="240">
+<img src="docs/screenshots/08-app-tamil.jpg" alt="The app in Tamil" width="240">
+<img src="docs/screenshots/09-tracking-page.jpg" alt="A reporter's tracking page" width="240">
+<img src="docs/screenshots/10-lost-poster.jpg" alt="A bilingual lost poster" width="240"><br>
+<b>The app in Hindi and Tamil · a reporter's tracking page · a bilingual lost poster</b></p>
 
-## How we used the BharatCode model API
+## Built for real people
 
-StrayWatch is a **harness**: model + prompts + tools + workflow. Every model call goes through the BharatCode
-(Adaption) **Responses API** using the official [`adaption`](https://pypi.org/project/adaption/) Python SDK
-([`app/ai.py`](app/ai.py)).
+- **6 languages, end to end:** English, हिंदी, বাংলা, தமிழ், తెలుగు, मराठी: app labels, chat, tracking page, posters,
+  and the rules themselves (what people type in their own script is understood). Fixed messages are pre-translated in
+  [`data/translations.json`](data/translations.json) so menus and safety cards work even if the AI is slow.
+- **No GPS? No problem:** type a landmark (“Lalpur Chowk, Ranchi”); it's found on the map and confirmed before use.
+  StrayWatch never invents a location.
+- **Weak networks:** photos are shrunk on the phone (5 MB → ~0.5 MB); reports made offline are saved and sent
+  automatically when the network returns.
+- **Phone notifications** reach responders and reporters even when the app is closed. Installable, no app store.
+- **Safe by design:** the AI never sets urgency, never diagnoses, never names a medicine or dose. Only verified vets
+  advise. Phone numbers are never shared; public maps show areas of ~1 km, never homes.
 
-| Job | Model (hosted on BharatCode) | How |
-|---|---|---|
-| **Read the scene**: species, injuries, urgency, on-road, sterilisation ear-notch, ear tag, first-aid card | `qwen3.5-397b` (vision) | Photo + the person's message (Hinglish, Hindi, Bengali…) → one strict JSON record, validated field by field ([`describe`](app/ai.py)) |
-| **Recognise an individual animal** (check-ins, caretaker-first rescue, duplicate profiles) | `qwen3.5-397b` (vision) | New photo + a **labelled contact sheet** of nearby candidates (A, B, C…) in one call ([`match`](app/ai.py), [`contact_sheet`](app/photos.py)) |
-| **Find lost animals** in past and future sightings | `qwen3.5-397b` (vision) | Same contact-sheet comparison against up to 18 nearby sightings from the last 14 days |
-| **Notice health changes** between check-ins | `gemma-4-31b-it` (vision) | Old vs new photo → "changed / see a vet", never a diagnosis |
-| **Understand free text** in any of the 6 languages | `gemma-4-31b-it` | Intent: SOS / lost / register / seen… (keywords first, model only when needed) |
-| **Talk in the user's language** | `qwen3.5-397b` | Every reply translated in **one batched call per language**, cached, native script |
+## How it works
 
-**Design rule: the AI reads and compares; plain code decides and enforces.** Helper radius, escalation timers, the
-daily alert cap, privacy rounding and confidence thresholds are code the model can't talk its way around. For
-example, if a reporter writes *"khoon aa raha hai"* (it's bleeding) but the photo looks calm, code keeps the case
-**urgent**: a rescue tool must believe the person on the spot.
-
-### What we learned about the API, and how we engineered around it
-- **Reasoning budget.** `qwen3.5-397b` is a reasoning model. With default settings it spent the whole token budget
-  thinking and returned nothing. We set `reasoning.effort = "none"` for reading jobs: **~2–3 s** per photo, accurate.
-- **Images per request and rate limits.** Sending one photo per candidate was slow and hit the per-user rate limit.
-  We tile candidates into **one labelled contact sheet**, so every comparison is exactly two images: **~1.2 s** for up
-  to 9 candidates. Calls retry with back-off and are capped at 3 in parallel.
-- **Look-alike animals.** Indian street dogs often share the "tan coat, white chest, curled tail" look. The prompt
-  says common features don't count without a distinctive one, and StrayWatch only acts on its own at **95%+**
-  confidence; anything lower is a question to a human ("Is this Bruno?").
-
-### Measured (on this repo, Nov 2026)
-| Test | Result |
-|---|---|
-| Scene reading: healthy dog, cow on road, cat, blank image, text-only Hinglish SOS | 5/5 correct; blank image rejected as "no animal"; text-only SOS → dog · injured · **high** |
-| Re-identification: 11 animals, each shown again cropped, mirrored and darker among 5–6 look-alikes | **11/11** recognised, ~1.2 s each |
-| Animal absent from candidates (should say "none") | 5/6 correct; the miss was two near-identical white cows, so matches always go to a human to confirm |
-| Full SOS: report → triage → recognised as Bruno → caretaker alerted (in Hindi) → accepted → closed | ✅ about 6 s locally, about 10 s on the live free-tier server, from the location being shared to the caretaker's alert |
-| Escalation: caretaker silent → next helper → "can't go" → third helper (in Bengali), reporter updated | ✅ |
-| Lost & Found: lost cow posted → found in yesterday's sightings 1.6 km away → owner confirms → finder thanked | ✅ |
-
-*Honest caveat:* the re-identification test uses edited copies of the same photo, which is easier than real life.
-Real-world accuracy needs a pilot with real caretakers, which is our next step.
-
-## Safety, privacy and ethics (built in, not bolted on)
-- **The AI never writes medical advice.** It picks one of 10 reviewed first-aid cards
-  ([`data/first_aid.json`](data/first_aid.json)) based on People For Animals, Humane World for Animals, Blue Cross
-  and WHO, with sources shown. Every card starts with *don't touch, a scared animal can bite*, and the rabies rule
-  (wash 15 min, vaccine today) is always included.
-- **Private by default.** Phone numbers are never shared; owners, finders and helpers talk through the bot. Public
-  posters show an area, never an exact spot. Photos are re-encoded, which strips hidden GPS data.
-- **For animals, never against them.** There is no "remove this dog" flow. StrayWatch follows the spirit of India's
-  Animal Birth Control Rules, 2023: care, vaccinate, sterilise.
-- **Abuse-resistant.** Photos with no animal alert nobody. Duplicate reports of the same animal merge into one case.
-  Helpers get alerts only within 8 km, at most 6 a day, and can type *pause*.
-- **Not an emergency service.** If a person is hurt, call 112.
-
-## Architecture
 ```mermaid
 flowchart LR
-  APP[StrayWatch app<br/>installable web app + website] --> E
-  WA[WhatsApp add-on<br/>Cloud API webhook] -.-> E
-  E[Conversation engine<br/>app/engine.py] -->|photo + text| AI[BharatCode Responses API<br/>qwen3.5-397b · gemma-4-31b-it]
-  AI -->|validated JSON| E
-  E --> DB[(Postgres / SQLite<br/>animals, cases, sightings, lost posts)]
-  T[Escalation timer<br/>every 20 s] --> E
-  E -->|translated per recipient| OUT[Reporter · caretaker · helpers · owner]
+  APP[StrayWatch app · WhatsApp] --> ROOM
+  CAM[Camera agent<br/>YOLOv8 at the edge] -->|animal lying in a lane| ROOM
+  subgraph ROOM[Agent Room]
+    T[Triage agent] --> R[Urgency rules<br/>tested code] --> D[Dispatch agent]
+    I[Identify agent] --> D
+    D --> W[Watch agent<br/>timers, escalation]
+    D --> H[Hotspot agent]
+    V[Vet care]
+  end
+  ROOM --> L[(Case ledger<br/>Postgres)]
+  ROOM -->|translated per person| OUT[Responders · reporters · vets · city map · signboards]
 ```
-- `app/engine.py`: channel-agnostic flows (welcome, My Animals, SOS, Lost & Found); returns messages for many people
-- `app/ai.py`: every BharatCode call, validation, retries and fallbacks
-- `app/channels/whatsapp.py`: webhook, media download, buttons, lists, location requests
-- `app/main.py`: website, the installable app (`/app`, manifest, service worker), public posters, City view,
-  WhatsApp webhook, escalation loop
-- `app/templates/`, `app/static/`: the doodle-style pages and the chat UI
+
+| Part | Model / tool |
+|---|---|
+| Triage, Identify, proof check, vet pre-check | Vision LLM via the BharatCode model API (`qwen3.5-397b`, `gemma-4-31b-it`), strict JSON validated field by field |
+| Camera agent | YOLOv8n + ByteTrack + OpenCV at the edge, 1–2 fps (`edge/camera_agent.py`) |
+| Rules, dispatch, timers, ledger | Python, FastAPI, SQLAlchemy (Postgres in production, SQLite locally) |
+| App and website | Installable PWA, Web Push, Leaflet + OpenStreetMap, Three.js (only on capable devices) |
+
+Code map: `app/rules.py` (urgency rules) · `app/engine.py` (conversations, dispatch, escalation, ledger) · `app/vet.py`
+(Vet Care) · `app/words.py` (words in 6 languages) · `app/ai.py` (every model call) · `app/push.py` (notifications) ·
+`app/geo.py` (landmarks) · `edge/camera_agent.py` · `data/` (care cards, food guide, translations, cameras).
+
+## Measured
+
+| Test | Result |
+|---|---|
+| Triage reads a photo + message | ~2–3 s; Hinglish and all 5 Indian scripts understood |
+| Re-identification of 11 animals among look-alikes | 11/11, ~1.2 s each (edited copies of photos) |
+| Report → caretaker alerted | ~10 s on the free live server |
+| Camera agent | Alert for dogs lying on a road; 0 alerts for healthy cows walking on real road video; ~35 ms per frame on a 4-core CPU |
+| Two-city load test (1,238 reports) | Every case got a responder; 0 alerts beyond 8 km or to the wrong city; daily cap held |
+| Automated tests | 84, run in GitHub Actions |
+
+Honest limits: the responder teams and vets on the live site are **samples** until real partners join; the camera
+model is pretrained (not yet fine-tuned on Indian night footage); care cards await review by a partner vet.
 
 ## Run it
+
 ```bash
 pip install -r requirements.txt
-export ADAPTION_API_KEY=pt_live_...        # BharatCode / Adaption console → Settings → API keys
-uvicorn app.main:app --reload              # http://localhost:8000
-python -m pytest -q tests                  # 11 offline tests (stand-in AI)
+export ADAPTION_API_KEY=...                 # BharatCode model API key
+uvicorn app.main:app --reload               # http://localhost:8000
+python -m pytest -q tests                   # offline tests with a stand-in AI
 ```
-Demo mode (on by default) seeds sample caretakers, animals and posters around Ranchi so the website works right away.
 
-**Deploy:** Render → New → Blueprint → this repo ([`render.yaml`](render.yaml)). Add `ADAPTION_API_KEY`,
-`PUBLIC_BASE_URL`, and a free Postgres `DATABASE_URL` (e.g. Neon). Point a free uptime monitor at `/health` so the
-escalation timer keeps running.
+Demo mode (on by default) seeds clearly labelled sample responders, vets, animals and cases around Ranchi.
+Optional settings: `SW_ADMIN_KEY` (verify vets at `/admin/vets`), `SW_AGENT_KEY` (camera agents),
+`WHATSAPP_*` (WhatsApp add-on). See [`.env.example`](.env.example).
 
-**WhatsApp:** developers.facebook.com → create a Business app → add WhatsApp → copy the token and phone-number ID into
-`WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` → set the webhook to `https://<your-app>/webhook/whatsapp` with
-verify token `straywatch-verify` and subscribe to `messages`. See [`.env.example`](.env.example).
+**Deploy:** Render → New → Blueprint → this repo ([`render.yaml`](render.yaml)); add `ADAPTION_API_KEY` and a Postgres
+`DATABASE_URL`. A paid always-on instance is recommended for real use, so the first SOS never waits for the server to wake.
 
-## What's next
-A pilot with feeders and a local NGO in Ranchi to measure real recognition accuracy and response times · WhatsApp
-message templates so reminders can reach caretakers outside the 24-hour window · a ward dashboard for sterilisation
-and vaccination coverage · night-time cattle hotspots for drivers.
+**Camera on an edge box:** `pip install -r edge/requirements-edge.txt`, then
+`python edge/camera_agent.py --video rtsp://… --camera ratu-rd-01 --server https://… --key $SW_AGENT_KEY`.
 
 ## Credits
-Demo photos are openly licensed from Wikimedia Commons; authors and licences are in
-[`data/demo_photos/credits.json`](data/demo_photos/credits.json). First-aid guidance is adapted from People For
-Animals, Humane World for Animals, Blue Cross and WHO (links in [`data/first_aid.json`](data/first_aid.json)).
-Doodles and design are original to this project.
+
+Demo photos are openly licensed from Wikimedia Commons (authors and licences in
+[`data/demo_photos/credits.json`](data/demo_photos/credits.json)); road footage “Stray Cattle in Lutyens Delhi”
+(Fowler&fowler, CC BY-SA 3.0). First-aid and care guidance is adapted from People For Animals, Humane World for
+Animals, Blue Cross, FIAPO, the Department of Animal Husbandry & Dairying, ASPCA and WHO (links in `data/`).
+Maps © OpenStreetMap contributors. Doodles and design are original to this project.
 
 Made with 💛 in Ranchi.
