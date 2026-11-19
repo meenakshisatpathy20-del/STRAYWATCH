@@ -73,6 +73,7 @@
   async function post(item) {
     const fd = new FormData();
     fd.append("text", item.text || ""); fd.append("button", item.button || "");
+    if (!APP) fd.append("demo", "1");  // the demo page: sample responders only, kept apart from real reports
     if (item.lat != null) { fd.append("lat", item.lat); fd.append("lon", item.lon); }
     if (item.photo) fd.append("photo", item.photo instanceof File ? item.photo : new File([await (await fetch(item.photo)).blob()], "photo.jpg", { type: "image/jpeg" }));
     const r = await fetch("/api/chat", { method: "POST", body: fd });

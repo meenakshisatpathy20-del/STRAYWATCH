@@ -42,7 +42,7 @@ def s(monkeypatch):
     monkeypatch.setattr(ai, "compare_health", lambda *a, **k: {"changed": False, "note": "", "see_vet": False})
     monkeypatch.setattr(ai, "intent", lambda s, u, t: {"intent": "other", "name": None, "via": "test"})
     with SessionLocal() as sess:
-        for uid, dlat in (("demo:a", 0.001), ("demo:b", 0.01), ("demo:far", 1.0)):
+        for uid, dlat in (("h:a", 0.001), ("h:b", 0.01), ("h:far", 1.0)):
             sess.add(User(id=uid, lang="en", is_volunteer=True, lat=LALPUR[0] + dlat, lon=LALPUR[1], state={}))
         sess.commit()
         yield sess
@@ -73,14 +73,14 @@ def test_sos_alerts_nearest_helper_and_escalates(s, monkeypatch):
     out = talk(s, "web:r", lat=LALPUR[0], lon=LALPUR[1])
     assert "Needs care" in texts(out, "web:r"), "injured but off the road = CHECK"
     assert "/track/SW-" in (out[0].link or ""), "the reporter gets a tracking link"
-    first = [o for o in out if o.to == "demo:a"]
+    first = [o for o in out if o.to == "h:a"]
     assert first and first[0].buttons[0][0].startswith("case:go")
-    assert not [o for o in out if o.to == "demo:far"], "helpers beyond the radius must not be alerted"
+    assert not [o for o in out if o.to == "h:far"], "helpers beyond the radius must not be alerted"
     case = s.query(Case).one()
     case.alerted_at = now() - timedelta(minutes=11)  # nobody answered in time
     s.commit()
     out = engine.escalate_due(s)
-    assert any(o.to == "demo:b" for o in out), "should move on to the next helper"
+    assert any(o.to == "h:b" for o in out), "should move on to the next helper"
     assert any(o.to == "web:r" and "Still finding help" in o.text for o in out), "reporter is kept informed"
 
 
@@ -111,10 +111,10 @@ def test_accept_notifies_reporter_and_second_accept_is_polite(s, monkeypatch):
     talk(s, "web:r", image=photo())
     talk(s, "web:r", lat=LALPUR[0], lon=LALPUR[1])
     cid = s.query(Case).one().id
-    out = talk(s, "demo:a", button=f"case:go:{cid}")
+    out = talk(s, "h:a", button=f"case:go:{cid}")
     assert any(o.to == "web:r" and "on the way" in o.text for o in out)
-    assert any(o.link and "maps.google" in o.link for o in out if o.to == "demo:a"), "helper gets directions"
-    out = talk(s, "demo:b", button=f"case:go:{cid}")
+    assert any(o.link and "maps.google" in o.link for o in out if o.to == "h:a"), "helper gets directions"
+    out = talk(s, "h:b", button=f"case:go:{cid}")
     assert "already on the way" in texts(out)
 
 
@@ -150,9 +150,9 @@ def test_duplicate_sos_is_merged(s, monkeypatch):
 def test_helper_daily_cap(s, monkeypatch):
     from app import config
     monkeypatch.setattr(config, "MAX_ALERTS_PER_HELPER_PER_DAY", 1)
-    s.add(Case(reporter_id="x", lat=LALPUR[0], lon=LALPUR[1], asked=["demo:a"], triage={}, status="closed"))
+    s.add(Case(reporter_id="x", lat=LALPUR[0], lon=LALPUR[1], asked=["h:a"], triage={}, status="closed"))
     s.commit()
-    assert "demo:a" not in engine.pick_helpers(s, LALPUR[0], LALPUR[1], exclude=set())
+    assert "h:a" not in engine.pick_helpers(s, LALPUR[0], LALPUR[1], exclude=set())
 
 
 def test_parse_json_handles_fences_and_chatter():

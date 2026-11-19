@@ -82,7 +82,9 @@ def vet_label(v: VetProfile, who: str) -> str:
 def online_vets(s, c: Consult) -> list[VetProfile]:
     vets = [v for v in s.scalars(select(VetProfile).where(VetProfile.verified.is_(True), VetProfile.online.is_(True),
                                                           VetProfile.user_id.is_not(None)))
-            if v.id not in (c.asked or []) and (not v.species or c.species in v.species or "any" in v.species)]
+            if v.id not in (c.asked or []) and (not v.species or c.species in v.species or "any" in v.species)
+            # Sample vets answer the demo page only; a real person is matched with real, verified vets.
+            and (not v.sample or config.DEMO_RUN.get() or (c.summary or {}).get("demo"))]
     me = s.get(User, c.user_id)
     lang = (me.lang if me else None) or "en"
     # Speaks my language first, then free for strays (for street animals), then cheapest.
@@ -192,7 +194,8 @@ def intake(s, u: User, d: dict) -> list:
         urgency = flag
     c = Consult(user_id=u.id, who=d.get("who", "pet"), species=sm["species"] if d.get("species") in (None, "other") else d["species"],
                 animal_id=d.get("animal_id"), case_id=d.get("case_id"), photo_id=d.get("photo"), text=d.get("text"),
-                summary=sm, urgency=urgency, card=sm["card"], status="intake")
+                summary={**sm, "demo": True} if config.DEMO_RUN.get() else sm, urgency=urgency, card=sm["card"],
+                status="intake")
     s.add(c)
     s.flush()
     u.state = {"flow": "vet_ready", "d": {"consult": c.id}}
@@ -312,6 +315,8 @@ def button(s, u: User, b: str) -> list:
               "problem": t.get("injuries") or t.get("condition", "injured"), "symptoms": [], "since": "now (rescue)",
               "eating_drinking": "not said", "card": "wound_bleeding", "urgency": "today",
               "summary_for_vet": f"StrayWatch rescue SW-{k.id}: {t.get('summary', '')}", "ask": []}
+        if config.DEMO_RUN.get() or t.get("demo"):
+            sm["demo"] = True
         c = Consult(user_id=u.id, who="case", species=t.get("species"), case_id=k.id, animal_id=k.animal_id,
                     photo_id=k.photo_id, summary=sm, urgency="today", card="wound_bleeding", status="intake",
                     text="Rescuer at the scene")

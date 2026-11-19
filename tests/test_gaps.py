@@ -50,7 +50,7 @@ def test_reporter_can_cancel_and_the_responder_stands_down(s, monkeypatch):
     c = s.query(Case).one()
     assert any(b[0] == f"case:cancel:{c.id}" for o in out for b in o.buttons if o.to == "web:r")
     out = talk(s, "web:r", button=f"case:cancel:{c.id}")
-    assert c.status == "cancelled" and any(o.to == "demo:a" and "cancelled" in o.text for o in out)
+    assert c.status == "cancelled" and any(o.to == "h:a" and "cancelled" in o.text for o in out)
     assert engine.escalate_due(s) == [], "nobody else is alerted after cancelling"
 
 

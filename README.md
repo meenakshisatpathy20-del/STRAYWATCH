@@ -61,6 +61,17 @@ hurt, it's treated as hurt; if the photo is unclear, StrayWatch asks instead of 
 <img src="docs/screenshots/10-lost-poster.jpg" alt="A bilingual lost poster" width="240"><br>
 <b>The app in Hindi and Tamil · a reporter's tracking page · a bilingual lost poster</b></p>
 
+## Real use vs the demo
+
+- **Citizens:** open the site and tap **Report an animal** (or the 💬 chat button on any page), or install it from
+  `/app` like an app. No sign-up. Each report goes only to **real people who joined nearby**: volunteers (type
+  *volunteer* in the chat), NGOs, city teams and verified vets.
+- **If nobody has joined near you yet,** StrayWatch says so at once, and tells you to call **1962** (government
+  animal ambulance). It keeps the case open and alerts the first rescuer who joins nearby. It never pretends someone
+  is coming.
+- **The `/demo` page is sealed:** the labelled sample responders and sample vets answer only demo reports. A real
+  report never waits on a sample account, and demo cases never merge with real ones.
+
 ## Built for real people
 
 - **6 languages, end to end:** English, हिंदी, বাংলা, தமிழ், తెలుగు, मराठी: app labels, chat, tracking page, posters,
@@ -111,7 +122,7 @@ Code map: `app/rules.py` (urgency rules) · `app/engine.py` (conversations, disp
 | Report → caretaker alerted | ~10 s on the free live server |
 | Camera agent | Alert for dogs lying on a road; 0 alerts for healthy cows walking on real road video; ~35 ms per frame on a 4-core CPU |
 | Two-city load test (1,238 reports) | Every case got a responder; 0 alerts beyond 8 km or to the wrong city; daily cap held |
-| Automated tests | 86, run in GitHub Actions |
+| Automated tests | 91, run in GitHub Actions |
 
 Honest limits: the responder teams and vets on the live site are **samples** until real partners join; the camera
 model is pretrained (not yet fine-tuned on Indian night footage); care cards await review by a partner vet.

@@ -474,7 +474,8 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
     # Same animal already reported nearby in the last 60 minutes? Merge instead of sending a second rescue.
     recent = [c for dist, c in nearby(s, Case, lat, lon, 0.2)
               if c.status in ("alerting", "assigned") and c.created > now() - timedelta(minutes=60)
-              and (c.triage or {}).get("species") == desc["species"]]
+              and (c.triage or {}).get("species") == desc["species"]
+              and bool((c.triage or {}).get("demo")) == config.DEMO_RUN.get()]  # never mix demo and real reports
     if recent:
         c = recent[0]
         s.info["last_case_id"] = c.id
@@ -485,7 +486,8 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
         if RANK.get(new.level, 0) > RANK.get(c.level or "LOW", 0):
             c.level, c.reasons, c.hop_minutes = new.level, new.reasons, new.hop_minutes
             c.teams = list(dict.fromkeys(new.teams + list(c.teams or [])))
-            extra = pick_responders(s, c.lat, c.lon, new.teams, exclude={c.reporter_id, *(c.asked or []), *(c.queue or [])})
+            extra = pick_responders(s, c.lat, c.lon, new.teams, exclude={c.reporter_id, *(c.asked or []), *(c.queue or [])},
+                                    demo=is_demo_case(c))
             c.queue = extra + list(c.queue or [])
             ledger(s, c, "Rules", "upgraded", f"New report is more urgent → {new.level}: " + "; ".join(new.reasons),
                    trace_title="Rules raised urgency")
@@ -514,6 +516,8 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
                           "keep responders free for emergencies. 🙏 If this one is urgent, call the animal ambulance on "
                           "*1962*.")]
     dec = rules.decide(rules.facts_from(desc, said_hurt, now()))
+    if config.DEMO_RUN.get():
+        desc = {**desc, "demo": True}  # marks the case so later hand-offs stay inside the demo
     case = Case(reporter_id=u.id, photo_id=d.get("photo"), triage=desc, lat=lat, lon=lon,
                 status="alerting" if dec.dispatch else "logged", level=dec.level, reasons=dec.reasons,
                 teams=dec.teams, hop_minutes=dec.hop_minutes, source=source, track_key=secrets.token_urlsafe(8)[:10])
@@ -554,7 +558,7 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
                 step(s, u.id, "Recognised the animal", f"{animal.name} ({mres['confidence']:.0%}): {mres['reason']}")
                 ledger(s, case, "Identify", "identified", f"Recognised {animal.name}, a registered {animal.species} "
                                                           f"({mres['confidence']:.0%} sure). Caretaker goes first.")
-    caretakers = [g for g in (animal.guardians if animal else []) if g != u.id]
+    caretakers = real_only([g for g in (animal.guardians if animal else []) if g != u.id], config.DEMO_RUN.get())
     responders = pick_responders(s, lat, lon, dec.teams, exclude={u.id, *caretakers})
     case.queue = caretakers + responders
     plan = (["caretaker"] if caretakers else []) + dec.teams
@@ -635,22 +639,32 @@ def pick_helpers(s, lat, lon, exclude: set) -> list[str]:
     return out[:8]
 
 
-def pick_responders(s, lat, lon, teams: list[str], exclude: set) -> list[str]:
+def is_demo_case(case: Case | None) -> bool:
+    return config.DEMO_RUN.get() or bool(case and (case.triage or {}).get("demo"))
+
+
+def real_only(ids: list[str], demo: bool) -> list[str]:
+    """Sample accounts (demo:…) are for the demo page only. A real report goes to real people."""
+    return ids if demo else [i for i in ids if not i.startswith("demo:")]
+
+
+def pick_responders(s, lat, lon, teams: list[str], exclude: set, demo: bool | None = None) -> list[str]:
     """Up to 2 nearest people per team, in the order the rules chose. Teams cover the city; volunteers 8 km."""
+    demo = config.DEMO_RUN.get() if demo is None else demo
     out: list[str] = []
     for team in teams:
         if team == "volunteer":
-            ids = pick_helpers(s, lat, lon, exclude | set(out))[:3]
+            ids = real_only(pick_helpers(s, lat, lon, exclude | set(out)), demo)[:3]
         else:
-            ids = [h.id for dist, h in nearby(s, User, lat, lon, CITY_RADIUS_KM, role=team)
-                   if h.id not in exclude and h.id not in out and not (h.state or {}).get("paused")][:2]
+            ids = real_only([h.id for dist, h in nearby(s, User, lat, lon, CITY_RADIUS_KM, role=team)
+                             if h.id not in exclude and h.id not in out and not (h.state or {}).get("paused")], demo)[:2]
         out += ids
     return out
 
 
 def coordinators(s, case: Case) -> list[str]:
-    return [h.id for dist, h in nearby(s, User, case.lat, case.lon, CITY_RADIUS_KM * 3, role="coordinator")
-            if h.id not in (case.asked or [])]
+    return real_only([h.id for dist, h in nearby(s, User, case.lat, case.lon, CITY_RADIUS_KM * 3, role="coordinator")
+                      if h.id not in (case.asked or [])], is_demo_case(case))
 
 
 def responder_label(s, case: Case, uid: str) -> tuple[str, bool]:
@@ -703,6 +717,14 @@ def alert_next(s, case: Case) -> list[Out]:
         case.status = "unanswered"
         ledger(s, case, "Watch", "unanswered", "Everyone was asked, including the duty coordinator. Case kept open; "
                                                "new responders nearby will be alerted.", trace_title="No responder free")
+        if len(case.asked or []) == 0:
+            return [Out(case.reporter_id,
+                        f"No StrayWatch responder has joined near you yet (case SW-{case.id}), so please don't wait for one. 🙏\n"
+                        "*Call the government animal ambulance on 1962 now*, or your municipal animal helpline. "
+                        "If a person is hurt, call 112.\nKeep a safe distance and, if the animal is in a lane, "
+                        "warn traffic from the roadside.\nI've saved the case: when a rescuer or vet joins nearby, "
+                        "they'll be alerted. You can also share StrayWatch with rescuers you know.",
+                        buttons=[("m:vet", "Talk to a vet"), ("menu", "Menu")])]
         return [Out(case.reporter_id,
                     f"I'm sorry, no StrayWatch responder near you is free right now (case SW-{case.id}). 🙏\n"
                     "Please call the government animal ambulance on *1962* or your municipal animal helpline. "
@@ -789,12 +811,12 @@ def case_button(s, u: User, b: str) -> list[Out]:
         c.level, c.reasons, c.teams, c.hop_minutes, c.status = dec.level, dec.reasons, dec.teams, dec.hop_minutes, "alerting"
         ledger(s, c, "Rules", "ruled", f"Reporter says it got worse → {dec.level}: " + "; ".join(dec.reasons),
                trace_title="Rules set urgency")
-        c.queue = pick_responders(s, c.lat, c.lon, dec.teams, exclude={u.id})
+        c.queue = pick_responders(s, c.lat, c.lon, dec.teams, exclude={u.id}, demo=is_demo_case(c))
         return [Out(u.id, f"Thank you for telling me. 🚨 Case SW-{c.id} is now *{LEVEL_WORDS[dec.level]}*. "
                           "I'm alerting responders now.", link=track_link(c))] + alert_next(s, c)
     if action == "more":
         c.queue = pick_responders(s, c.lat, c.lon, (c.teams or ["volunteer"]),
-                                  exclude={c.reporter_id, *(c.asked or [])})
+                                  exclude={c.reporter_id, *(c.asked or [])}, demo=is_demo_case(c))
         ledger(s, c, "Person", "more_help", "Responder asked for one more person.", trace_title="Extra help requested")
         nxt = alert_next(s, c) if c.queue else []
         c.status = "assigned"

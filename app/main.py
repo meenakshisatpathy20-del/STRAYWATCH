@@ -563,7 +563,7 @@ def _web_user(request: Request, response: Response) -> str:
 @app.post("/api/chat")
 async def chat(request: Request, response: Response, text: str = Form(""), button: str = Form(""),
                lat: float | None = Form(None), lon: float | None = Form(None), as_user: str = Form(""),
-               photo: UploadFile | None = File(None)):
+               demo: str = Form(""), photo: UploadFile | None = File(None)):
     me = _web_user(request, response)
     uid = me
     if as_user:  # the demo caretaker/helper phones on the website
@@ -574,6 +574,8 @@ async def chat(request: Request, response: Response, text: str = Form(""), butto
     if img and len(img) > 12 * 1024 * 1024:
         raise HTTPException(413, "Photo too large")
     inc = engine.Incoming(text=text[:1000], image=img or None, lat=lat, lon=lon, button=button[:120] or None)
+    # The demo page (and its sample responders) runs inside a sealed demo; everything else is real use.
+    config.DEMO_RUN.set(config.DEMO_MODE and (demo == "1" or uid.startswith("demo:")))
     msgs = await asyncio.to_thread(run_turn, uid, inc, uid)
     return {"messages": msgs, "me": uid}
 
@@ -629,6 +631,7 @@ async def camera_replay(which: str = "lying"):
     if not sample.exists():
         raise HTTPException(404, "no recorded sample")
     import json as _json
+    config.DEMO_RUN.set(True)
     return await asyncio.to_thread(_camera_event, _json.loads(sample.read_text()))
 
 

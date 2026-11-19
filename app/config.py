@@ -54,3 +54,9 @@ MAX_SOS_PER_HOUR = int(os.environ.get("SW_MAX_SOS_PER_HOUR", "5"))
 
 # Admin pages (verifying vets). Empty = admin pages are switched off.
 ADMIN_KEY = os.environ.get("SW_ADMIN_KEY", "")
+
+
+# True while handling a message from the website's demo page (or a demo replay). Only then may the clearly
+# labelled sample responders and sample vets be alerted: a real report must never wait on a sample account.
+from contextvars import ContextVar
+DEMO_RUN: ContextVar[bool] = ContextVar("demo_run", default=False)

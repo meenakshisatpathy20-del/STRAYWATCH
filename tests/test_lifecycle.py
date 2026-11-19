@@ -59,7 +59,7 @@ def test_calm_animal_off_road_is_only_logged(s, monkeypatch):
     # ...but the citizen can say it is hurt after all, and then responders are alerted
     out = talk(s, "web:r", button=f"case:worse:{c.id}")
     assert c.status == "alerting" and c.level == "CHECK"
-    assert any(o.to == "demo:a" for o in out)
+    assert any(o.to == "h:a" for o in out)
 
 
 def test_unclear_photo_asks_the_reporter_instead_of_guessing(s, monkeypatch):
@@ -72,7 +72,7 @@ def test_unclear_photo_asks_the_reporter_instead_of_guessing(s, monkeypatch):
 
 
 def test_escalates_to_duty_coordinator_after_everyone_else(s, monkeypatch):
-    for uid in ("demo:a", "demo:b"):
+    for uid in ("h:a", "h:b"):
         s.get(User, uid).is_volunteer = False  # no volunteers: only the coordinator is left
     add_team(s, "t:coord", "coordinator", dlat=0.05)
     monkeypatch.setattr(ai, "describe", desc(condition="injured", on_road=True))
@@ -90,14 +90,14 @@ def test_closing_needs_a_photo_checked_by_ai(s, monkeypatch):
     monkeypatch.setattr(ai, "describe", desc(condition="injured", on_road=True))
     report(s)
     c = s.query(Case).one()
-    talk(s, "demo:a", button=f"case:go:{c.id}")
-    out = talk(s, "demo:a", button=f"case:safe:{c.id}")
-    assert "photo" in texts(out, "demo:a") and c.status == "assigned", "not closed until a photo arrives"
+    talk(s, "h:a", button=f"case:go:{c.id}")
+    out = talk(s, "h:a", button=f"case:safe:{c.id}")
+    assert "photo" in texts(out, "h:a") and c.status == "assigned", "not closed until a photo arrives"
     monkeypatch.setattr(ai, "proof_check", lambda *a, **k: {"ok": False, "checked": True, "note": "no animal visible"})
-    out = talk(s, "demo:a", image=photo("gray"))
-    assert c.status == "assigned" and "couldn't see" in texts(out, "demo:a")
+    out = talk(s, "h:a", image=photo("gray"))
+    assert c.status == "assigned" and "couldn't see" in texts(out, "h:a")
     monkeypatch.setattr(ai, "proof_check", lambda *a, **k: {"ok": True, "checked": True, "note": "dog on a stretcher"})
-    out = talk(s, "demo:a", image=photo("green"))
+    out = talk(s, "h:a", image=photo("green"))
     assert c.status == "closed" and c.proof_photo_id
     assert any(o.to == "web:r" and o.image_url for o in out), "the reporter sees the proof photo"
 
@@ -106,7 +106,7 @@ def test_every_hand_off_is_in_the_ledger(s, monkeypatch):
     monkeypatch.setattr(ai, "describe", desc(condition="injured", on_road=True))
     report(s)
     c = s.query(Case).one()
-    talk(s, "demo:a", button=f"case:go:{c.id}")
+    talk(s, "h:a", button=f"case:go:{c.id}")
     kinds = [e.kind for e in s.query(CaseEvent).filter_by(case_id=c.id).order_by(CaseEvent.id)]
     assert kinds[:5] == ["reported", "triaged", "ruled", "planned", "alerted"] and kinds[-1] == "accepted"
 
