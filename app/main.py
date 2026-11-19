@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 
-from . import config, engine
+from . import config, engine, push
 from .channels import whatsapp
 from .db import (Animal, Case, CaseEvent, CheckIn, LostPost, Outbox, PartnerLead, Photo, SessionLocal, Sighting, Trace,
                  User, init_db)
@@ -47,7 +47,7 @@ def deliver(s, outs: list[engine.Out], viewer: str | None = None) -> list[dict]:
     """Translate, then send each message to its recipient: WhatsApp users via the Cloud API, everyone else to an
     outbox the browser polls. Messages for `viewer` are returned directly."""
     outs = engine.localise(s, outs)
-    mine = []
+    mine, pinged = [], set()
     for o in outs:
         if o.to == viewer:
             mine.append(o.as_dict())
@@ -56,6 +56,11 @@ def deliver(s, outs: list[engine.Out], viewer: str | None = None) -> list[dict]:
                 _undelivered(s, o)
         else:
             s.add(Outbox(user_id=o.to, payload=o.as_dict()))
+            # Phone notification, once per person per update, so they see it even with the app closed.
+            if o.to not in pinged and not o.to.startswith(("demo:", "camera:")) and push.has_subscription(s, o.to):
+                pinged.add(o.to)
+                link = o.link if (o.link or "").startswith(config.PUBLIC_BASE_URL + "/track/") else "/app"
+                push.notify(o.to, o.text, link.replace(config.PUBLIC_BASE_URL, "") or "/app")
     return mine
 
 
@@ -312,13 +317,19 @@ def manifest():
     }, media_type="application/manifest+json")
 
 
-SW = """const C='sw-v1';const SHELL=['/app','/static/style.css','/static/app.js','/static/favicon.svg'];
+SW = """const C='sw-v2';const SHELL=['/app','/static/style.css','/static/app.js','/static/favicon.svg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)));self.skipWaiting();});
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);
  if(e.request.method!=='GET'||u.pathname.startsWith('/api/'))return;
  e.respondWith(fetch(e.request).then(r=>{if(SHELL.includes(u.pathname)){const k=r.clone();caches.open(C).then(c=>c.put(e.request,k));}return r;})
- .catch(()=>caches.match(e.request)));});"""
+ .catch(()=>caches.match(e.request)));});
+self.addEventListener('push',e=>{let d={};try{d=e.data.json();}catch(x){d={title:'StrayWatch',body:e.data?e.data.text():''};}
+ e.waitUntil(self.registration.showNotification(d.title||'StrayWatch',{body:d.body||'',icon:'/static/icon-192.png',
+ badge:'/static/icon-192.png',data:{url:d.url||'/app'},vibrate:[200,100,200],tag:'sw-'+(d.url||'app'),renotify:true}));});
+self.addEventListener('notificationclick',e=>{e.notification.close();const u=(e.notification.data&&e.notification.data.url)||'/app';
+ e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(ws=>{for(const w of ws){if(w.url.includes(u)&&'focus' in w)return w.focus();}
+ return clients.openWindow(u);}));});"""
 
 
 @app.get("/sw.js")
@@ -344,7 +355,7 @@ AGENT_LABELS = {"Triage": "Triage agent", "Rules": "Urgency rules (code)", "Disp
                 "Watch": "Watch agent", "Identify": "Identify agent", "Camera": "Camera agent",
                 "Hotspot": "Hotspot agent", "Person": "Person"}
 STATUS_WORDS = {"alerting": "Finding help", "assigned": "Help on the way", "closed": "Safe · closed",
-                "unanswered": "No responder free yet", "logged": "Logged"}
+                "unanswered": "No responder free yet", "logged": "Logged", "cancelled": "Cancelled"}
 
 
 def ist_str(dt) -> str:
@@ -367,6 +378,7 @@ def case_view(s, c: Case) -> dict:
         "closed": ("The animal is safe 🎉", "Thank you for reporting. You made this happen."),
         "unanswered": ("No responder is free yet", "Please call the government animal ambulance on 1962. StrayWatch keeps "
                                                    "the case open and alerts new responders nearby."),
+        "cancelled": ("Case cancelled", "You told us the animal had gone, so the responders stood down. Thank you."),
         "logged": ("Logged, no rescue needed", "It was off the road and not hurt, so nobody was disturbed. It's on the "
                                               "hotspot map. If it gets worse, tell StrayWatch in the chat."),
     }.get(c.status, ("Case", ""))
@@ -412,6 +424,12 @@ def api_room_case(cid: int):
         return {"case": case_view(s, c), "events": case_events(s, c, public_only=False)}
 
 
+TRACK_STRINGS = ["your report", "Case", "reported", "Every step, as it happened",
+                 "This page refreshes by itself every 20 seconds.", "Your photo", "Proof photo from the responder",
+                 "Stay safe: don't step into traffic or touch a scared animal.", "Animal ambulance (govt.)",
+                 "If a person is hurt"]
+
+
 @app.get("/track/{code}", response_class=HTMLResponse)
 def track(request: Request, code: str, k: str = ""):
     """The reporter's private tracking page (link sent in the chat)."""
@@ -423,8 +441,22 @@ def track(request: Request, code: str, k: str = ""):
         c = s.get(Case, cid)
         if not c or not c.track_key or not secrets.compare_digest(k, c.track_key):
             raise HTTPException(404, "Case not found")
-        return templates.TemplateResponse(request, "track.html", {"c": case_view(s, c), "events": case_events(s, c),
-                                                                  "active": None})
+        view, events = case_view(s, c), case_events(s, c)
+        rep = s.get(User, c.reporter_id)
+        lang = (rep.lang if rep else None) or "en"
+        T = {k: k for k in TRACK_STRINGS}
+        if lang != "en":
+            texts = list(TRACK_STRINGS) + [view[k] for k in ("headline", "next", "level_words", "status_words", "species")] \
+                + [e["detail"] for e in events] + [e["agent_label"] for e in events]
+            tr = engine.translate_texts(s, texts, lang)
+            s.commit()
+            T = {k: tr.get(k, k) for k in TRACK_STRINGS}
+            for k in ("headline", "next", "level_words", "status_words", "species"):
+                view[k] = tr.get(view[k], view[k])
+            for e in events:
+                e["detail"], e["agent_label"] = tr.get(e["detail"], e["detail"]), tr.get(e["agent_label"], e["agent_label"])
+        return templates.TemplateResponse(request, "track.html", {"c": view, "events": events, "active": None,
+                                                                  "T": T, "lang": lang})
 
 
 @app.get("/photo/{pid}")
@@ -526,6 +558,34 @@ def api_signboards():
     """JSON feed for roadside signboards near hotspot cameras."""
     with SessionLocal() as s:
         return {"boards": engine.signboards(s)}
+
+
+@app.get("/api/push/key")
+def push_key():
+    return {"key": push.keys()}
+
+
+@app.post("/api/push/subscribe")
+async def push_subscribe(request: Request, response: Response):
+    uid = _web_user(request, response)
+    sub = await request.json()
+    with _lock, SessionLocal() as s:
+        ok = push.subscribe(s, uid, sub if isinstance(sub, dict) else {})
+        s.commit()
+    if not ok:
+        raise HTTPException(400, "bad subscription")
+    return {"ok": True}
+
+
+@app.get("/api/my/cases")
+def my_cases(request: Request, response: Response):
+    """The reporter's own cases, newest first, with their private tracking links."""
+    uid = _web_user(request, response)
+    with SessionLocal() as s:
+        rows = list(s.scalars(select(Case).where(Case.reporter_id == uid).order_by(Case.id.desc()).limit(20)))
+        return {"cases": [{**{k: v for k, v in case_view(s, c).items() if k in ("code", "level", "level_words", "status",
+                                                                               "status_words", "species", "created", "photo")},
+                           "track": f"/track/SW-{c.id}?k={c.track_key}"} for c in rows]}
 
 
 @app.get("/api/inbox")

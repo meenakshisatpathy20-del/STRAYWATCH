@@ -50,27 +50,76 @@
     if (!on && t) t.remove();
   }
 
+  // ---------- weak networks: shrink photos on the phone, and queue reports while offline
+  async function shrink(file) {
+    if (!file || !/^image\//.test(file.type) || file.size < 350000) return file;
+    try {
+      const bmp = await createImageBitmap(file);
+      const k = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+      const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.8));
+      return blob && blob.size < file.size ? new File([blob], "photo.jpg", { type: "image/jpeg" }) : file;
+    } catch (e) { return file; }
+  }
+  const QKEY = "sw_queue";
+  const qload = () => { try { return JSON.parse(localStorage.getItem(QKEY) || "[]"); } catch (e) { return []; } };
+  const qsave = (q) => { try { localStorage.setItem(QKEY, JSON.stringify(q)); return true; } catch (e) { return false; } };
+  const toDataURL = (f) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => res(null); r.readAsDataURL(f); });
+  async function post(item) {
+    const fd = new FormData();
+    fd.append("text", item.text || ""); fd.append("button", item.button || "");
+    if (item.lat != null) { fd.append("lat", item.lat); fd.append("lon", item.lon); }
+    if (item.photo) fd.append("photo", item.photo instanceof File ? item.photo : new File([await (await fetch(item.photo)).blob()], "photo.jpg", { type: "image/jpeg" }));
+    const r = await fetch("/api/chat", { method: "POST", body: fd });
+    if (!r.ok && r.status >= 500) throw new Error("server " + r.status);
+    return (await r.json()).messages || [];
+  }
+  let flushing = false;
+  async function flushQueue() {
+    if (flushing || busy || !navigator.onLine) return;
+    let q = qload(); if (!q.length) return;
+    flushing = true; busy = true; typing(true);
+    try {
+      while (q.length) {
+        const msgsBack = await post(q[0]);
+        q.shift(); qsave(q);
+        msgsBack.forEach((m) => bubble(msgs, m, false));
+      }
+      bubble(msgs, { text: offlineMsg(1) }, false);
+    } catch (e) { /* still offline; try again later */ }
+    typing(false); busy = false; flushing = false; pollTrace();
+  }
+  window.addEventListener("online", flushQueue);
+  setInterval(flushQueue, 20000);
+
   async function send({ text = "", button = "", file = null, lat = null, lon = null, echo = null, asUser = "", previewSrc = null }) {
     if (asUser) return sendAs(asUser, button, echo, file);
-    if (busy) return;
+    while (busy) await new Promise((r) => setTimeout(r, 150));  // wait our turn; never drop what the person sent
     busy = true;
+    if (button.startsWith("lang:")) { try { localStorage.setItem("sw_lang_code", button.slice(5)); } catch (e) {} }
     if (echo || text || file || lat) bubble(msgs, { text: echo || text || (lat ? "📍 Location shared" : ""), previewSrc }, true);
-    const fd = new FormData();
-    fd.append("text", text); fd.append("button", button);
-    if (lat != null) { fd.append("lat", lat); fd.append("lon", lon); }
-    if (file) fd.append("photo", file);
+    if (file) file = await shrink(file);
+    const item = { text, button, lat, lon, photo: file };
     typing(true);
     try {
-      const r = await fetch("/api/chat", { method: "POST", body: fd });
-      const j = await r.json();
+      if (qload().length) throw new Error("queue first");  // keep the order: older saved messages go first
+      const back = await post(item);
       typing(false);
-      (j.messages || []).forEach((m) => bubble(msgs, m, false));
+      back.forEach((m) => bubble(msgs, m, false));
     } catch (e) {
       typing(false);
-      bubble(msgs, { text: "Network hiccup. Please try again. 🙏" }, false);
+      if (APP) {
+        const q = qload();
+        q.push({ ...item, photo: file ? await toDataURL(file) : null });
+        if (qsave(q)) bubble(msgs, { text: offlineMsg(0) }, false);
+        else bubble(msgs, { text: "Network problem, and your phone's storage is full. Please try again, or call 1962. 🙏" }, false);
+      } else bubble(msgs, { text: "Network hiccup. Please try again. 🙏" }, false);
     }
     busy = false;
     pollTrace();
+    if (navigator.onLine && qload().length) setTimeout(flushQueue, 500);
   }
 
   async function sendAs(asUser, button, echo, file = null) {
@@ -86,13 +135,30 @@
     pollInbox(); pollTrace();
   }
 
+  function noLocation() {
+    // Never invent a location in the real app: a rescuer would go to the wrong place. The server replies in the user's language.
+    send({ button: "loc:denied", echo: "📍 ✕" });
+    const t = $("#text"); if (t) t.focus();
+  }
+  // Messages shown while offline can't come from the server, so they live here in all 6 languages.
+  const OFFLINE = {
+    en: ["📶 No network right now. I've saved this on your phone and will send it by myself as soon as you're back online. You can keep adding details.", "📶 Back online: your saved message was sent."],
+    hi: ["📶 अभी नेटवर्क नहीं है। मैंने इसे आपके फ़ोन में सेव कर लिया है और नेटवर्क आते ही अपने आप भेज दूँगा। आप और जानकारी जोड़ते रह सकते हैं।", "📶 नेटवर्क वापस आ गया: आपका सेव किया हुआ संदेश भेज दिया गया।"],
+    bn: ["📶 এখন নেটওয়ার্ক নেই। আমি এটি আপনার ফোনে সেভ করেছি, নেটওয়ার্ক ফিরলেই নিজে থেকে পাঠিয়ে দেব। আপনি আরও তথ্য যোগ করতে পারেন।", "📶 নেটওয়ার্ক ফিরে এসেছে: আপনার সেভ করা বার্তা পাঠানো হয়েছে।"],
+    ta: ["📶 இப்போது நெட்வொர்க் இல்லை. இதை உங்கள் போனில் சேமித்துள்ளேன்; நெட்வொர்க் வந்ததும் தானாக அனுப்புவேன். மேலும் விவரங்களைச் சேர்க்கலாம்.", "📶 நெட்வொர்க் திரும்ப வந்தது: சேமித்த செய்தி அனுப்பப்பட்டது."],
+    te: ["📶 ఇప్పుడు నెట్‌వర్క్ లేదు. దీన్ని మీ ఫోన్‌లో సేవ్ చేశాను; నెట్‌వర్క్ రాగానే నేనే పంపిస్తాను. మీరు మరిన్ని వివరాలు జోడించవచ్చు.", "📶 నెట్‌వర్క్ తిరిగి వచ్చింది: సేవ్ చేసిన సందేశం పంపబడింది."],
+    mr: ["📶 आत्ता नेटवर्क नाही. मी हे तुमच्या फोनमध्ये सेव्ह केले आहे आणि नेटवर्क येताच आपोआप पाठवेन. तुम्ही अजून माहिती जोडू शकता.", "📶 नेटवर्क परत आले: तुमचा सेव्ह केलेला संदेश पाठवला."],
+  };
+  const myLang = () => { try { return localStorage.getItem("sw_lang_code") || "en"; } catch (e) { return "en"; } };
+  const offlineMsg = (i) => (OFFLINE[myLang()] || OFFLINE.en)[i];
   function shareLocation(kind) {
     if (kind === "demo") return send({ lat: DEMO_SPOT.lat, lon: DEMO_SPOT.lon, echo: "📍 " + DEMO_SPOT.label });
-    if (!navigator.geolocation) return send({ lat: DEMO_SPOT.lat, lon: DEMO_SPOT.lon, echo: "📍 " + DEMO_SPOT.label });
+    const fallback = () => APP ? noLocation()
+      : send({ lat: DEMO_SPOT.lat, lon: DEMO_SPOT.lon, echo: "📍 " + DEMO_SPOT.label + " (demo spot: your location was blocked)" });
+    if (!navigator.geolocation) return fallback();
     navigator.geolocation.getCurrentPosition(
       (p) => send({ lat: p.coords.latitude, lon: p.coords.longitude, echo: "📍 My location" }),
-      () => send({ lat: DEMO_SPOT.lat, lon: DEMO_SPOT.lon, echo: "📍 " + DEMO_SPOT.label + " (location blocked, used demo spot)" }),
-      { timeout: 8000 });
+      fallback, { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 });
   }
 
   $("#composer").addEventListener("submit", (e) => {

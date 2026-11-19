@@ -31,6 +31,8 @@
   .mini .pic{width:84px;height:68px;flex-shrink:0;border-radius:12px;border:2px solid var(--ink);background:var(--paper) center/cover no-repeat}
   .mini b{font-family:"Baloo 2";font-size:19px;display:block;line-height:1.1}
   .mini span{font-size:13px;color:var(--ink2)}
+  .pushbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sky-soft);border-bottom:2.5px solid var(--ink);font-weight:700;font-size:14px}
+  .pushbar span{flex:1}.pushbar .x{border:0;background:none;font-size:18px;cursor:pointer;padding:4px}
 </style>
 </head>
 <body data-mode="app">
@@ -41,6 +43,11 @@
   </header>
 
   <section class="pane on" id="pane-chat" aria-label="Chat">
+    <div class="pushbar" id="pushbar" hidden>
+      <span>🔔 Get updates and rescue alerts on this phone, even when the app is closed.</span>
+      <button class="btn small sun" type="button" id="pushOn">Turn on</button>
+      <button class="x" type="button" id="pushX" aria-label="Not now">✕</button>
+    </div>
     <div class="msgs" id="msgs" aria-live="polite"></div>
     <form class="composer" id="composer">
       <label class="icon-btn" title="Send a photo"><span class="sr">Send a photo</span>
@@ -72,7 +79,12 @@
 
   <section class="pane" id="pane-more" aria-label="More">
     <div class="scroll">
-      <h2 style="font-size:30px">More</h2>
+      <h2 style="font-size:30px">My reports</h2>
+      <div id="myCases"><p class="note">Loading…</p></div>
+      <h2 style="font-size:30px;margin-top:6px">Help more</h2>
+      <button class="mini" type="button" id="volBtn" style="font:inherit;text-align:left;cursor:pointer"><div><b>🦸 Become a volunteer</b><span>Get alerts for hurt animals within 8 km. At most 6 a day; pause any time.</span></div></button>
+      <button class="mini" type="button" id="pushBtn2" style="font:inherit;text-align:left;cursor:pointer"><div><b>🔔 Notifications</b><span id="pushState">Turn on alerts for this phone</span></div></button>
+      <a class="mini" href="/vet"><div><b>🩺 Vet care</b><span>Animal ambulance 1962, find a vet near you</span></div></a>
       <a class="mini" href="/city"><div><b>City view</b><span>Vaccination coverage, rescue times and hotspots near you</span></div></a>
       <a class="mini" href="/#promise"><div><b>Our promise</b><span>Safety, privacy, and how the AI is used</span></div></a>
       {% if wa_number %}<a class="mini" href="https://wa.me/{{ wa_number }}?text=hi"><div><b>Also on WhatsApp</b><span>Use StrayWatch from WhatsApp too</span></div></a>
@@ -96,6 +108,50 @@ let deferred = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; document.getElementById("install").style.display = "inline-flex"; });
 document.getElementById("install").addEventListener("click", async () => { if (deferred) { deferred.prompt(); deferred = null; } });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+
+// ---------- notifications (Web Push)
+const canPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const b64ToBytes = (s) => { s = s.replace(/-/g, "+").replace(/_/g, "/"); s += "===".slice((s.length + 3) % 4); const r = atob(s); return Uint8Array.from(r, c => c.charCodeAt(0)); };
+async function enablePush() {
+  if (!canPush) { alert("This browser can't show notifications. Keep StrayWatch open, or use the WhatsApp add-on."); return false; }
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") { showPushState(); return false; }
+  const reg = await navigator.serviceWorker.ready;
+  const { key } = await (await fetch("/api/push/key")).json();
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
+  await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(sub) });
+  showPushState(); return true;
+}
+function showPushState() {
+  const st = !canPush ? "Not supported in this browser" : Notification.permission === "granted" ? "On ✅" :
+             Notification.permission === "denied" ? "Blocked: allow notifications in your browser settings" : "Turn on alerts for this phone";
+  document.getElementById("pushState").textContent = st;
+  let dismissed = false; try { dismissed = localStorage.getItem("sw_push_x") === "1"; } catch (e) {}
+  document.getElementById("pushbar").hidden = !(canPush && Notification.permission === "default" && !dismissed);
+}
+document.getElementById("pushOn").onclick = enablePush;
+document.getElementById("pushBtn2").onclick = enablePush;
+document.getElementById("pushX").onclick = () => { try { localStorage.setItem("sw_push_x", "1"); } catch (e) {} showPushState(); };
+showPushState();
+if (canPush && Notification.permission === "granted") enablePush().catch(() => {});  // keep the subscription fresh
+
+// ---------- my reports + volunteer
+async function loadMine() {
+  const box = document.getElementById("myCases");
+  try {
+    const j = await (await fetch("/api/my/cases")).json();
+    box.innerHTML = j.cases.length ? j.cases.map(c => `<a class="mini" href="${c.track}"><div class="pic" style="background-image:url('${c.photo || ""}')"></div>
+      <div><b>${c.code} · ${c.species}</b><span>${c.status_words} · ${c.created}</span></div></a>`).join("")
+      : '<p class="note">No reports yet. See an animal in trouble? Go to Chat and tap “Hurt animal: SOS”.</p>';
+  } catch (e) { box.innerHTML = '<p class="note">Couldn\'t load your reports. Check your network.</p>'; }
+}
+document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => { if (b.dataset.tab === "more") loadMine(); }));
+document.getElementById("volBtn").onclick = () => {
+  document.querySelector('[data-tab="chat"]').click();
+  const t = document.getElementById("text"); t.value = "volunteer";
+  document.getElementById("composer").requestSubmit();
+};
 </script>
 <script src="/static/app.js"></script>
 </body>

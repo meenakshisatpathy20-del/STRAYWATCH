@@ -43,3 +43,10 @@ DEMO_MODE = os.environ.get("SW_DEMO_MODE", "1") == "1"
 
 # Agent protocol: edge agents (cameras) post events with this key. Empty = only allowed in demo mode.
 AGENT_KEY = os.environ.get("SW_AGENT_KEY", "")
+
+# Typed landmarks -> coordinates (OpenStreetMap Nominatim). Bias towards the pilot city.
+GEOCODER_URL = os.environ.get("SW_GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
+CITY_CENTER = (float(os.environ.get("SW_CITY_LAT", "23.3441")), float(os.environ.get("SW_CITY_LON", "85.3096")))
+
+# Abuse limits for reporters
+MAX_SOS_PER_HOUR = int(os.environ.get("SW_MAX_SOS_PER_HOUR", "5"))
