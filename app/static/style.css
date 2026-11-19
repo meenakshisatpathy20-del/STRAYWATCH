@@ -303,3 +303,11 @@ pre.code{margin:0;white-space:pre-wrap;font-size:14px;background:#1b1626;color:#
   .chatpanel{inset:0;width:auto;height:auto;border-radius:0;border:0;box-shadow:none}
   .chat-open .chatfab{display:none}
 }
+
+/* ---------- overview: the idea and what's new ---------- */
+.idea{background:var(--sun-soft);box-shadow:5px 5px 0 var(--ink)}
+.idea-line{font-size:clamp(19px,2.2vw,24px);line-height:1.45;margin:6px 0 0}
+.newgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px}
+.newgrid .card{padding:16px}
+.newgrid .card>b{font-family:"Baloo 2";font-size:19px;display:block;line-height:1.2}
+.newgrid p{margin:6px 0 0;font-size:15px;color:var(--ink2)}

@@ -220,8 +220,13 @@
           () => send({ file: f, echo: "📷 Cows walking on the road", previewSrc: URL.createObjectURL(f) }),
           () => send({ lat: RATU_RD.lat - 0.004, lon: RATU_RD.lon + 0.003, echo: "📍 Near Ratu Road" }),
         ]);
-      } else if (k === "vet") {
-        const f = await sampleFile("sick_puppy.jpg");
+      } else if (k === "vet" || k === "vetcat" || k === "vetcow") {
+        const S = {
+          vet: ["sick_puppy.jpg", "v:sp:dog", "🐕 Dog", "mera puppy 2 din se ulti kar raha hai aur kuch kha nahi raha"],
+          vetcat: ["sick_cat.jpg", "v:sp:cat", "🐈 Cat", "meri billi 3 din se kuch nahi kha rahi, bahut kamzor hai aur ek jagah padi rehti hai"],
+          vetcow: ["thin_cow.jpg", "v:sp:cow", "🐄 Cow / buffalo", "हमारी गाय कई दिन से ठीक से नहीं खा रही, दुबली हो रही है, सड़क पर प्लास्टिक खाती है"],
+        }[k];
+        const f = await sampleFile(S[0]);
         const tap = async (prefix) => {  // the first matching button in the newest message
           await wait();
           const last = [...msgs.querySelectorAll("button[data-id]")].reverse().find((x) => x.dataset.id.startsWith(prefix) && !x.disabled);
@@ -230,9 +235,9 @@
         };
         await run([
           () => send({ button: "m:vet", echo: "🩺 Talk to a vet" }),
-          () => send({ button: "v:who:pet", echo: "🏠 My pet" }),
-          () => send({ button: "v:sp:dog", echo: "🐕 Dog" }),
-          () => send({ file: f, text: "mera puppy 2 din se ulti kar raha hai aur kuch kha nahi raha", echo: "📷 mera puppy 2 din se ulti kar raha hai aur kuch kha nahi raha", previewSrc: URL.createObjectURL(f) }),
+          () => send({ button: k === "vet" || k === "vetcat" ? "v:who:pet" : "v:who:stray", echo: k === "vetcow" ? "🐾 A street animal" : "🏠 My pet" }),
+          () => send({ button: S[1], echo: S[2] }),
+          () => send({ file: f, text: S[3], echo: "📷 " + S[3], previewSrc: URL.createObjectURL(f) }),
           () => tap("v:connect"),
           () => tap("v:pick"),
         ]);
