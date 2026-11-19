@@ -145,6 +145,10 @@ Reply with ONE JSON object and nothing else:
  "condition": "healthy|injured|sick|trapped|dead|unknown",
  "injuries": "visible wounds/limping/bleeding, or 'none visible'",
  "on_road": true/false,                 // animal on or at the edge of a road with traffic
+ "blocking_lane": true/false,           // standing or lying IN a lane that vehicles use
+ "road_type": "main|minor|none|unknown",// main = wide/busy road or highway; minor = lane/side street
+ "lying_still": true/false,             // lying limp/motionless in a way that suggests it may be hurt or unconscious; a relaxed resting animal = false
+ "aggressive": true/false,              // snarling, chasing or charging at people or vehicles
  "urgency": "high|medium|low|none",    // high = bleeding, can't move, hit by vehicle, trapped, on a busy road
  "first_aid_card": "road_injury|bleeding|trapped|aggressive_or_scared|heat_stress|cattle_on_road|sick|dead_animal|puppies_or_kittens|general",
  "summary": "one short plain-English sentence a rescuer can act on",
@@ -178,6 +182,10 @@ def describe(s, user_id, image: str | None, message: str = "") -> dict:
         "condition": _enum(d.get("condition"), CONDITIONS, "unknown"),
         "injuries": str(d.get("injuries") or "none visible")[:160],
         "on_road": _bool(d.get("on_road", False)),
+        "blocking_lane": _bool(d.get("blocking_lane", False)),
+        "road_type": _enum(d.get("road_type"), {"main", "minor", "none", "unknown"}, "unknown"),
+        "lying_still": _bool(d.get("lying_still", False)),
+        "aggressive": _bool(d.get("aggressive", False)),
         "urgency": _enum(d.get("urgency"), URGENCY, "medium"),
         "first_aid_card": _enum(d.get("first_aid_card"), set(FIRST_AID_IDS), "general"),
         "summary": str(d.get("summary") or "Animal reported, details unclear.")[:220],
@@ -250,6 +258,29 @@ def compare_health(s, user_id, old_image: str | None, new_image: str) -> dict:
         return {"changed": False, "note": "", "see_vet": False}
     return {"changed": _bool(d.get("changed")), "note": str(d.get("note") or "")[:240],
             "see_vet": _bool(d.get("see_vet"))}
+
+
+PROOF_INSTRUCTIONS = """A StrayWatch responder sent a photo to close a rescue case. Image 1 is the photo from the
+original report (may be missing). Image 2 is the responder's proof photo. Check that the proof shows an animal of the
+same species that is now safe: off the road, being treated, in a vehicle/shelter, or with a person helping. Do not
+judge medical details. Reply with ONE JSON object only:
+{"animal_visible": true/false, "same_species": true/false, "looks_safe": true/false,
+ "same_animal_likely": true/false,   // coat, markings and build agree with the reported animal (if image 1 exists)
+ "note": "one short sentence describing what the proof photo shows"}"""
+
+
+def proof_check(s, user_id, report_image: str | None, proof_image: str, species: str) -> dict:
+    """Check a closing photo. Returns {ok, note}. On AI failure, accept the photo but say it was not checked."""
+    imgs = [report_image, proof_image] if report_image else [proof_image]
+    text = f"Species in the report: {species}." + ("" if report_image else " Only the proof photo is attached.")
+    try:
+        d = parse_json(call(s, user_id, "Checked the proof photo", config.FAST_MODEL, PROOF_INSTRUCTIONS, text, imgs,
+                            max_tokens=200))
+    except AIError:
+        return {"ok": True, "checked": False, "note": "Proof photo saved (automatic check unavailable)."}
+    ok = _bool(d.get("animal_visible")) and _bool(d.get("same_species", True)) and _bool(d.get("looks_safe", True))
+    same = _bool(d.get("same_animal_likely", True)) if report_image else True
+    return {"ok": ok, "checked": True, "same_animal": same, "note": str(d.get("note") or "")[:200]}
 
 
 # ---------------------------------------------------------------- understanding free text

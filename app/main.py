@@ -17,7 +17,7 @@ from sqlalchemy import func, select
 
 from . import config, engine
 from .channels import whatsapp
-from .db import Animal, Case, CheckIn, LostPost, Outbox, Photo, SessionLocal, Sighting, Trace, User, init_db
+from .db import Animal, Case, CaseEvent, CheckIn, LostPost, Outbox, Photo, SessionLocal, Sighting, Trace, User, init_db
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("straywatch")
@@ -253,6 +253,70 @@ def poster(request: Request, code: str):
                  else f"/?seen={card['code']}#try")
     return templates.TemplateResponse(request, "poster.html", {"p": card, "seen_link": seen_link,
                                                                "base": config.PUBLIC_BASE_URL})
+
+
+AGENT_LABELS = {"Triage": "Triage agent", "Rules": "Urgency rules (code)", "Dispatch": "Dispatch agent",
+                "Watch": "Watch agent", "Identify": "Identify agent", "Camera": "Camera agent",
+                "Hotspot": "Hotspot agent", "Person": "Person"}
+STATUS_WORDS = {"alerting": "Finding help", "assigned": "Help on the way", "closed": "Safe · closed",
+                "unanswered": "No responder free yet", "logged": "Logged"}
+
+
+def ist_str(dt) -> str:
+    return engine.ist(dt)
+
+
+def case_view(s, c: Case) -> dict:
+    """What a case looks like to people: plain words, no phone numbers, area rounded to ~1 km."""
+    from . import rules
+    t = c.triage or {}
+    helper = s.get(User, c.assigned_to) if c.assigned_to else None
+    who = None
+    if helper:
+        team, is_ct = engine.responder_label(s, c, helper.id)
+        who = "The animal's caretaker" if is_ct else (helper.org or rules.TEAM_LABELS.get(team, "A helper").capitalize())
+    head, nxt = {
+        "alerting": ("Finding help now", f"Responder #{len(c.asked or [])} has been alerted. If they can't reply in "
+                                          f"{engine.hop_words(c)}, StrayWatch asks the next one by itself."),
+        "assigned": ("Help is on the way 🚶", f"{who or 'A responder'} accepted. Please stay at a safe distance until they arrive."),
+        "closed": ("The animal is safe 🎉", "Thank you for reporting. You made this happen."),
+        "unanswered": ("No responder is free yet", "Please call the government animal ambulance on 1962. StrayWatch keeps "
+                                                   "the case open and alerts new responders nearby."),
+        "logged": ("Logged, no rescue needed", "It was off the road and not hurt, so nobody was disturbed. It's on the "
+                                              "hotspot map. If it gets worse, tell StrayWatch in the chat."),
+    }.get(c.status, ("Case", ""))
+    return {"code": f"SW-{c.id}", "id": c.id, "level": c.level or "HIGH",
+            "level_words": engine.LEVEL_WORDS.get(c.level or "HIGH", "URGENT"), "status": c.status,
+            "status_words": STATUS_WORDS.get(c.status, c.status), "species": (t.get("species") or "animal").title(),
+            "summary": t.get("summary", ""), "created": ist_str(c.created), "headline": head, "next": nxt,
+            "area": f"near {round(c.lat, config.PUBLIC_COORD_DECIMALS)}, {round(c.lon, config.PUBLIC_COORD_DECIMALS)}",
+            "photo": f"/photo/{c.photo_id}" if c.photo_id else None,
+            "proof": f"/photo/{c.proof_photo_id}" if c.proof_photo_id else None, "proof_note": c.proof_note,
+            "reasons": c.reasons or [], "teams": [rules.TEAM_LABELS.get(x, x) for x in (c.teams or [])],
+            "source": c.source or "citizen", "reports": c.merged_reports or 1, "who": who,
+            "minutes_to_accept": round((c.accepted_at - c.created).total_seconds() / 60, 1) if c.accepted_at else None}
+
+
+def case_events(s, c: Case, public_only=True) -> list[dict]:
+    q = select(CaseEvent).where(CaseEvent.case_id == c.id).order_by(CaseEvent.id)
+    return [{"at": e.created.strftime("%H:%M:%S") if not public_only else ist_str(e.created), "agent": e.agent,
+             "agent_label": AGENT_LABELS.get(e.agent, e.agent), "kind": e.kind, "detail": e.detail}
+            for e in s.scalars(q) if e.public or not public_only]
+
+
+@app.get("/track/{code}", response_class=HTMLResponse)
+def track(request: Request, code: str, k: str = ""):
+    """The reporter's private tracking page (link sent in the chat)."""
+    try:
+        cid = int(code.upper().removeprefix("SW-"))
+    except ValueError:
+        raise HTTPException(404, "Case not found")
+    with SessionLocal() as s:
+        c = s.get(Case, cid)
+        if not c or not c.track_key or not secrets.compare_digest(k, c.track_key):
+            raise HTTPException(404, "Case not found")
+        return templates.TemplateResponse(request, "track.html", {"c": case_view(s, c), "events": case_events(s, c),
+                                                                  "active": None})
 
 
 @app.get("/photo/{pid}")

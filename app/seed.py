@@ -51,9 +51,28 @@ def make_samples():
             out.write_bytes(photos.normalise(data))
 
 
+# Sample responder teams (deck slide 2: "caretaker first, then the nearest right team"). All clearly marked "Sample".
+RESPONDERS = [
+    ("demo:ngo", "Sample NGO rescue team", "ngo", "en", (23.3690, 85.3250)),
+    ("demo:vet", "Sample partner vet clinic", "vet", "hi", (23.3600, 85.3350)),
+    ("demo:cattle", "Sample municipal cattle team", "municipal_cattle", "hi", (23.3800, 85.3100)),
+    ("demo:abc", "Sample municipal ABC (dog) team", "abc", "hi", (23.3550, 85.3200)),
+    ("demo:police", "Sample traffic police desk", "police", "hi", (23.3650, 85.3300)),
+    ("demo:coord", "Sample duty coordinator", "coordinator", "en", (23.3441, 85.3096)),
+]
+
+
+def seed_responders(s):
+    for uid, org, role, lang, (lat, lon) in RESPONDERS:
+        if not s.get(User, uid):
+            s.add(User(id=uid, name=org, org=org, role=role, lang=lang, is_volunteer=False, lat=lat, lon=lon, state={}))
+    s.commit()
+
+
 def seed():
     make_samples()
     with SessionLocal() as s:
+        seed_responders(s)
         if s.get(User, "demo:priya"):
             return
         users = [
