@@ -169,6 +169,19 @@ class Trace(Base):
     created: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 
+class PartnerLead(Base):
+    """Someone who asked to partner (NGO, vet, municipal team, page, volunteer). Stored with consent, only to follow up."""
+    __tablename__ = "partner_leads"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    org: Mapped[str | None] = mapped_column(String(120))
+    kind: Mapped[str] = mapped_column(String(20))
+    contact: Mapped[str] = mapped_column(String(120))
+    area: Mapped[str | None] = mapped_column(String(80))
+    note: Mapped[str | None] = mapped_column(Text)
+    created: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
 class TranslationCache(Base):
     __tablename__ = "translations"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)

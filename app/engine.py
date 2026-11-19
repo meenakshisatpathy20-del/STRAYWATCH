@@ -755,6 +755,41 @@ def camera_case(s, cam_id: str, ev: dict, image: bytes) -> tuple[Case | None, li
     return (s.get(Case, cid) if cid else None), [o for o in outs if not o.to.startswith("camera:")]
 
 
+PLACES = [("Ratu Road", 23.3905, 85.3050), ("Lalpur", 23.3725, 85.3330), ("Kanke Road", 23.3950, 85.3200),
+          ("Hatia", 23.3300, 85.3000), ("Main Road, Ranchi", 23.3600, 85.3300), ("Doranda", 23.3450, 85.3200)]
+
+
+def place_name(lat, lon) -> str:
+    best = min(PLACES, key=lambda p: km(lat, lon, p[1], p[2]))
+    return best[0] if km(lat, lon, best[1], best[2]) <= 1.5 else f"area {lat:.2f}, {lon:.2f}"
+
+
+def hotspot_actions(s, days: int = 30) -> list[dict]:
+    """Hotspot agent: repeat cattle-on-road reports at the same place and time of day become a concrete action."""
+    since = now() - timedelta(days=days)
+    rows = []
+    for x in s.scalars(select(Sighting).where(Sighting.created >= since)):
+        if x.species in rules.CATTLE and (x.profile or {}).get("on_road"):
+            rows.append((x.lat, x.lon, x.created))
+    for c in s.scalars(select(Case).where(Case.created >= since)):
+        if (c.triage or {}).get("species") in rules.CATTLE and (c.triage or {}).get("on_road"):
+            rows.append((c.lat, c.lon, c.created))
+    groups: dict[tuple, int] = {}
+    for lat, lon, at in rows:
+        hour = rules.ist_hour(at) // 2 * 2  # 2-hour windows
+        key = (place_name(lat, lon), hour)
+        groups[key] = groups.get(key, 0) + 1
+    out = []
+    for (place, hour), n in sorted(groups.items(), key=lambda kv: -kv[1]):
+        if n < 2:
+            continue
+        h12 = lambda x: f"{(x - 1) % 12 + 1} {'AM' if x < 12 or x == 24 else 'PM'}"
+        out.append({"place": place, "hour": hour, "count": n,
+                    "action": f"Send the municipal cattle team to {place} around {h12(hour)}",
+                    "why": f"{n} cattle-on-road reports between {h12(hour)} and {h12(hour + 2)} in the last {days} days"})
+    return out[:6]
+
+
 def signboards(s) -> list[dict]:
     """Driver warnings for roadside signboards: no app needed (deck slide 2). One entry per camera."""
     out = []

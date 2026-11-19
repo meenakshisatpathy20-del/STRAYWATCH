@@ -5,8 +5,10 @@
   const APP = document.body.dataset.mode === "app";  // the installable app screen (/app): real use, no demo panels
   const DEMO_SPOT = { lat: 23.3725, lon: 85.3330, label: "Lalpur, Ranchi" };
   const RATU_RD = { lat: 23.3905, lon: 85.3050, label: "Ratu Road, Ranchi" };
-  let traceAfter = 0, busy = false, helperAs = "demo:priya";
-  const helperLog = { "demo:priya": [], "demo:arjun": [] };
+  let traceAfter = 0, busy = false;
+  const helperLog = {};
+  document.querySelectorAll("[data-as]").forEach((b) => { helperLog[b.dataset.as] = []; });
+  let helperAs = (document.querySelector('[data-as][aria-pressed="true"]') || document.querySelector("[data-as]") || {}).dataset?.as || "demo:priya";
 
   function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   function fmt(t) { return esc(t).replace(/\*([^*\n]+)\*/g, "<b>$1</b>"); }
@@ -49,7 +51,7 @@
   }
 
   async function send({ text = "", button = "", file = null, lat = null, lon = null, echo = null, asUser = "", previewSrc = null }) {
-    if (asUser) return sendAs(asUser, button, echo);
+    if (asUser) return sendAs(asUser, button, echo, file);
     if (busy) return;
     busy = true;
     if (echo || text || file || lat) bubble(msgs, { text: echo || text || (lat ? "📍 Location shared" : ""), previewSrc }, true);
@@ -71,11 +73,13 @@
     pollTrace();
   }
 
-  async function sendAs(asUser, button, echo) {
+  async function sendAs(asUser, button, echo, file = null) {
     const box = helper;
-    helperLog[asUser].push({ mine: true, m: { text: echo } });
-    if (asUser === helperAs) bubble(box, { text: echo }, true);
-    const fd = new FormData(); fd.append("button", button); fd.append("as_user", asUser);
+    const mine = file ? { text: echo, previewSrc: URL.createObjectURL(file) } : { text: echo };
+    helperLog[asUser].push({ mine: true, m: mine });
+    if (asUser === helperAs) bubble(box, mine, true);
+    const fd = new FormData(); fd.append("button", button || ""); fd.append("as_user", asUser);
+    if (file) fd.append("photo", file);
     const r = await fetch("/api/chat", { method: "POST", body: fd });
     const j = await r.json();
     (j.messages || []).forEach((m) => { helperLog[asUser].push({ mine: false, m }); if (asUser === helperAs) bubble(box, m, false, asUser); });
@@ -122,7 +126,8 @@
   document.querySelectorAll("[data-sample]").forEach((btn) =>
     btn.addEventListener("click", async () => {
       const k = btn.dataset.sample;
-      document.getElementById("try").scrollIntoView({ behavior: "smooth" });
+      const stage = document.getElementById("try") || document.getElementById("stage");
+      if (stage && window.innerWidth < 900) stage.scrollIntoView({ behavior: "smooth" });
       if (k === "reset") { msgs.innerHTML = ""; return send({ text: "menu", echo: "menu" }); }
       await ensureLang();
       if (k === "sos") {
@@ -131,6 +136,13 @@
           () => send({ button: "m:sos", echo: "Hurt animal: SOS" }),
           () => send({ file: f, text: "kutta ghayal hai, gaadi ne maara, pair se khoon aa raha hai", echo: "📷 kutta ghayal hai, gaadi ne maara, pair se khoon aa raha hai", previewSrc: URL.createObjectURL(f) }),
           () => send({ lat: DEMO_SPOT.lat + 0.0004, lon: DEMO_SPOT.lon + 0.0003, echo: "📍 Near Lalpur Chowk" }),
+        ]);
+      } else if (k === "cow") {
+        const f = await sampleFile("cow_road.jpg");
+        await run([
+          () => send({ button: "m:sos", echo: "Hurt animal: SOS" }),
+          () => send({ file: f, echo: "📷 Cows standing in the road", previewSrc: URL.createObjectURL(f) }),
+          () => send({ lat: RATU_RD.lat + 0.0002, lon: RATU_RD.lon + 0.0002, echo: "📍 " + RATU_RD.label }),
         ]);
       } else if (k === "register") {
         const f = await sampleFile("register_dog.jpg");
@@ -164,9 +176,16 @@
       helperAs = b.dataset.as;
       document.querySelectorAll("[data-as]").forEach((x) => x.setAttribute("aria-pressed", x === b));
       helper.innerHTML = "";
-      if (!helperLog[helperAs].length) helper.innerHTML = '<div class="typing">Alerts for this demo helper will appear here…</div>';
+      b.textContent = b.textContent.replace(" ●", "");
+      if (!helperLog[helperAs].length) helper.innerHTML = '<div class="typing">Alerts for this responder will appear here…</div>';
       helperLog[helperAs].forEach((x) => bubble(helper, x.m, x.mine, helperAs));
     }));
+
+  const hf = document.getElementById("helperFile");
+  if (hf) hf.addEventListener("change", (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    sendAs(helperAs, "", "📷 Proof photo", f); e.target.value = "";
+  });
 
   async function pollInbox() {
     try {
@@ -197,7 +216,8 @@
         const li = document.createElement("li");
         let detail = s.detail;
         if (s.model && detail.trim().startsWith("{")) {
-          try { const o = JSON.parse(detail.replace(/```json|```/g, "")); detail = o.summary || o.reason || o.note || (o.intent ? "intent: " + o.intent : JSON.stringify(o).slice(0, 160)); } catch (e) { detail = detail.slice(0, 160); }
+          try { const o = JSON.parse(detail.replace(/```json|```/g, "")); detail = o.summary || o.reason || o.note || (o.intent ? "intent: " + o.intent : JSON.stringify(o).slice(0, 160)); }
+          catch (e) { const m = detail.match(/"(summary|reason|note)"\s*:\s*"([^"]+)/); detail = m ? m[2] : detail.slice(0, 160); }
         }
         li.innerHTML = `<b>${esc(s.step)}</b>: ${esc(detail)} ${s.model ? `<span class="ms">· ${esc(s.model)} · ${(s.ms / 1000).toFixed(1)} s</span>` : ""}`;
         traceEl.appendChild(li);

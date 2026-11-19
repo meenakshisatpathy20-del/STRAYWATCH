@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Vet care · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">keeping cared-for animals healthy</div>
+  <h1>Vet care</h1>
+  <p>Daily care is the habit that makes rescue fast. This section helps caretakers reach a vet quickly and avoid the home remedies that hurt animals. The full module (health check, nutrition, vet handover) is being built now.</p>
+</div>
+
+<div class="grid3">
+  <div class="card" style="box-shadow:5px 5px 0 var(--coral)">
+    <h3 style="font-size:24px">🚑 Need help now?</h3>
+    <p>Government animal ambulance (Mobile Veterinary Unit) helpline, free in Jharkhand and many other states:</p>
+    <a class="btn coral big" href="tel:1962" style="width:100%">Call 1962</a>
+    <p class="note" style="margin-top:8px">If a person is hurt, call 112.</p>
+  </div>
+  <div class="card" style="box-shadow:5px 5px 0 var(--sky)">
+    <h3 style="font-size:24px">📍 Find a vet near me</h3>
+    <p>Opens your map app with veterinary clinics around where you are.</p>
+    <button class="btn sky big" id="findVet" type="button" style="width:100%">Show nearby vets</button>
+    <p class="note" style="margin-top:8px">Verified partner vets who treat strays free or at low cost will be listed here first.</p>
+  </div>
+  <div class="card" style="box-shadow:5px 5px 0 var(--mint)">
+    <h3 style="font-size:24px">🐾 Hurt animal on the road?</h3>
+    <p>Report it in the app. The right responder, including partner vets, gets the alert.</p>
+    <a class="btn mint big" href="/app" style="width:100%">Report an animal</a>
+  </div>
+</div>
+
+<section>
+  <div class="section-title"><h2>Please don't</h2><span class="hand">common remedies that harm</span></div>
+  <div class="grid3">
+    <div class="promise"><div class="dot" style="background:var(--coral-soft)">✗</div><div><b>Kerosene, engine oil or phenyl on wounds</b><p>They burn the skin and can poison the animal. A wound with maggots needs a vet the same day.</p></div></div>
+    <div class="promise"><div class="dot" style="background:var(--coral-soft)">✗</div><div><b>Human medicines</b><p>Many common painkillers are poisonous to dogs and cats. Only give medicine a vet prescribes, at the dose they give.</p></div></div>
+    <div class="promise"><div class="dot" style="background:var(--coral-soft)">✗</div><div><b>Food in plastic bags for cows</b><p>Cows swallow the plastic with the food, and it builds up in their stomach.</p></div></div>
+  </div>
+  <p class="note" style="margin-top:10px">General safety guidance, not a diagnosis. Every card in the coming health check will be reviewed by a partner vet before launch.</p>
+</section>
+
+<section>
+  <div class="section-title"><h2>Coming next</h2><span class="hand">designed, build in progress</span></div>
+  <div class="grid3">
+    <div class="card"><h3>🩺 Health check</h3><p>Photo, symptoms or a Hindi voice note → a vet-reviewed card and an urgency: emergency · today · this week · watch. No diagnosis, no doses.</p></div>
+    <div class="card"><h3>📝 Vet handover</h3><p>A one-page summary for the vet: photos, timeline, symptoms, vaccines. The animal gets seen sooner.</p></div>
+    <div class="card"><h3>🥣 Nutrition + reminders</h3><p>Reviewed food guides for dogs, puppies, cats and cows, “Can I feed this?”, and vaccine and deworming reminders.</p></div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("findVet").onclick = () => {
+  const go = (q) => window.open("https://www.google.com/maps/search/veterinary+clinic" + q, "_blank", "noopener");
+  if (!navigator.geolocation) return go("");
+  navigator.geolocation.getCurrentPosition(p => go(`/@${p.coords.latitude},${p.coords.longitude},14z`), () => go(""), {timeout: 8000});
+};
+</script>
+{% endblock %}
