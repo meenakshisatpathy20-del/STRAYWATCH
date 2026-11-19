@@ -27,6 +27,7 @@ from .db import (Animal, Case, CaseEvent, CheckIn, LostPost, Sighting, Trace, Tr
 log = logging.getLogger("straywatch.engine")
 DATA = Path(__file__).resolve().parent.parent / "data"
 FIRST_AID = json.loads((DATA / "first_aid.json").read_text(encoding="utf-8"))
+CAMERAS = json.loads((DATA / "cameras.json").read_text(encoding="utf-8"))["cameras"]
 SOURCE_NAMES = {"PFA": "People For Animals", "HW": "Humane World for Animals", "BC": "Blue Cross", "WHO": "WHO"}
 
 
@@ -347,6 +348,7 @@ def sos_step(s, u: User, text: str, photo_id: str | None, b: str) -> list[Out]:
     return create_case(s, u, d)
 
 
+RANK = {"LOW": 0, "CHECK": 1, "HIGH": 2}
 LEVEL_WORDS = {"HIGH": "URGENT", "CHECK": "Needs a check", "LOW": "Logged, no rescue needed"}
 TEAM_RADIUS_KM = {"volunteer": None, "caretaker": None}  # None = config.HELPER_RADIUS_KM; teams cover the city
 CITY_RADIUS_KM = 20.0
@@ -398,9 +400,20 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
               and (c.triage or {}).get("species") == desc["species"]]
     if recent:
         c = recent[0]
+        s.info["last_case_id"] = c.id
         c.merged_reports = (c.merged_reports or 1) + 1
-        ledger(s, c, "Triage", "merged", f"Another person reported the same animal ({c.merged_reports} reports). "
-                                         "No second rescue was started.")
+        ledger(s, c, "Triage", "merged", ("The Camera agent" if source == "camera" else "Another person") +
+               f" reported the same animal ({c.merged_reports} reports). No second rescue was started.")
+        new = rules.decide(rules.facts_from(desc, said_hurt, now()))
+        if RANK.get(new.level, 0) > RANK.get(c.level or "LOW", 0):
+            c.level, c.reasons, c.hop_minutes = new.level, new.reasons, new.hop_minutes
+            c.teams = list(dict.fromkeys(new.teams + list(c.teams or [])))
+            extra = pick_responders(s, c.lat, c.lon, new.teams, exclude={c.reporter_id, *(c.asked or []), *(c.queue or [])})
+            c.queue = extra + list(c.queue or [])
+            ledger(s, c, "Rules", "upgraded", f"New report is more urgent → {new.level}: " + "; ".join(new.reasons),
+                   trace_title="Rules raised urgency")
+            if c.status == "alerting" and extra:
+                c.alerted_at = now() - timedelta(days=1)  # Watch agent moves to the right team on its next tick
         step(s, u.id, "Merged with an open case", f"SW-{c.id} already open ({c.merged_reports} reports), no duplicate rescue")
         if d.get("photo"):
             add_sighting(s, u.id, d["photo"], desc, lat, lon, "sos")
@@ -415,9 +428,12 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
                 teams=dec.teams, hop_minutes=dec.hop_minutes, source=source, track_key=secrets.token_urlsafe(8)[:10])
     s.add(case)
     s.flush()
-    who = "Camera agent" if source == "camera" else "A citizen"
-    ledger(s, case, "Camera" if source == "camera" else "Person", "reported",
-           f"{who} reported a {desc['species']}" + (" with a photo" if d.get("photo") else " in words") + ".")
+    s.info["last_case_id"] = case.id
+    if source == "camera":
+        ledger(s, case, "Camera", "reported", (d.get("camera_note") or "Camera agent flagged an animal in a lane.") + ".")
+    else:
+        ledger(s, case, "Person", "reported",
+               f"A citizen reported a {desc['species']}" + (" with a photo" if d.get("photo") else " in words") + ".")
     ledger(s, case, "Triage", "triaged", f"{desc['summary']} (condition: {desc['condition']}, on road: "
                                          f"{'yes' if desc.get('on_road') else 'no'})")
     ledger(s, case, "Rules", "ruled", f"{dec.level}: " + "; ".join(dec.reasons), trace_title="Rules set urgency")
@@ -707,6 +723,53 @@ def close_case(s, c: Case, u: User, proof_photo: str | None, note: str) -> list[
     return [Out(u.id, "You're a hero! 🦸💛 Case closed. If the animal needs a vet, call 1962 or take it to the nearest clinic."),
             Out(c.reporter_id, f"🎉 Good news! The animal from case SW-{c.id} is safe now. Thank you for caring.",
                 image_url=photo_url(proof_photo), link=track_link(c))]
+
+
+# ------------------------------------------------------------------ CAMERA AGENT
+
+def camera_case(s, cam_id: str, ev: dict, image: bytes) -> tuple[Case | None, list[Out]]:
+    """An edge Camera agent saw an animal in a lane too long. The geometry is fact (code); the AI reads the snapshot."""
+    cam = CAMERAS[cam_id]
+    u = get_or_create_user(s, f"camera:{cam_id}")
+    u.lang, u.name, u.lat, u.lon = "en", cam["name"], cam["lat"], cam["lon"]
+    pid = photos.save(s, image).id
+    secs = ev.get("seconds_in_lane", 0)
+    kind = ev.get("kind", "dwell")
+    note = (f"{cam['name']}: a {ev.get('species', 'animal')} has " +
+            (f"not moved for {secs:.0f} s in a traffic lane" if kind == "still" else f"stayed {secs:.0f} s in a traffic lane"))
+    desc = ai.describe(s, u.id, photos.data_url(s, pid), "Road camera alert. " + note)
+    if not desc["is_animal"] or desc["species"] == "other":
+        desc["is_animal"], desc["species"] = True, ev.get("species", "cow")
+    # Camera geometry is measured, not guessed: the animal IS in the lane.
+    desc.update(on_road=True, blocking_lane=True, road_type=cam.get("road_type", "unknown"))
+    if kind == "still":
+        desc["lying_still"] = True
+        if desc["condition"] == "healthy":
+            desc["condition"] = "unknown"
+    if desc["species"] in ("cow", "buffalo") and desc["first_aid_card"] == "general":
+        desc["first_aid_card"] = "cattle_on_road"
+    s.info.pop("last_case_id", None)
+    outs = create_case(s, u, {"photo": pid, "desc": desc, "lat": cam["lat"], "lon": cam["lon"], "camera_note": note},
+                       source="camera")
+    cid = s.info.pop("last_case_id", None)
+    return (s.get(Case, cid) if cid else None), [o for o in outs if not o.to.startswith("camera:")]
+
+
+def signboards(s) -> list[dict]:
+    """Driver warnings for roadside signboards: no app needed (deck slide 2). One entry per camera."""
+    out = []
+    for cam_id, cam in CAMERAS.items():
+        open_cases = [c for d, c in nearby(s, Case, cam["lat"], cam["lon"], 0.5)
+                      if c.status in ("alerting", "assigned", "unanswered") and c.created > now() - timedelta(minutes=45)]
+        cattle = [c for c in open_cases if (c.triage or {}).get("species") in rules.CATTLE]
+        dogs = [c for c in open_cases if (c.triage or {}).get("species") == "dog"]
+        msg = ("CATTLE ON ROAD AHEAD · SLOW DOWN" if cattle else
+               "ANIMAL ON ROAD AHEAD · SLOW DOWN" if dogs or open_cases else "")
+        out.append({"camera_id": cam_id, "name": cam["name"], "lat": cam["lat"], "lon": cam["lon"],
+                    "show": bool(msg), "message_en": msg,
+                    "message_hi": ("आगे सड़क पर पशु · धीरे चलें" if msg else ""),
+                    "cases": [f"SW-{c.id}" for c in open_cases]})
+    return out
 
 
 # ------------------------------------------------------------------ MY ANIMALS
