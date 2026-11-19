@@ -361,9 +361,11 @@ def city(request: Request):
 
 
 @app.get("/app", response_class=HTMLResponse)
-def app_screen(request: Request):
-    """The installable app: chat, lost & found, more. Same engine as the website demo and WhatsApp."""
-    return templates.TemplateResponse(request, "app.html", {"posts": public_posts(), "wa_number": config.WA_DISPLAY_NUMBER})
+def app_screen(request: Request, embed: int = 0):
+    """The installable app: chat, lost & found, more. Same engine as the website demo and WhatsApp.
+    embed=1: shown inside the floating chat panel on every website page."""
+    return templates.TemplateResponse(request, "app.html", {"posts": public_posts(), "wa_number": config.WA_DISPLAY_NUMBER,
+                                                            "embed": bool(embed)})
 
 
 @app.get("/manifest.webmanifest")

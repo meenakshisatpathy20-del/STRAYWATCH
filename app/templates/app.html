@@ -32,13 +32,15 @@
   .mini .pic{width:84px;height:68px;flex-shrink:0;border-radius:12px;border:2px solid var(--ink);background:var(--paper) center/cover no-repeat}
   .mini b{font-family:"Baloo 2";font-size:19px;display:block;line-height:1.1}
   .mini span{font-size:13px;color:var(--ink2)}
+  body.embed .app{border:0;max-width:none}
+  body.embed .app-head .logo span{font-size:18px}
   .pushbar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--sky-soft);border-bottom:2.5px solid var(--ink);font-weight:700;font-size:13px;line-height:1.25}
   .pushbar span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .tabbar button span{font-size:12.5px;line-height:1.15;text-align:center}
   .pushbar span{flex:1}.pushbar .x{border:0;background:none;font-size:18px;cursor:pointer;padding:4px}
 </style>
 </head>
-<body data-mode="app">
+<body data-mode="app" class="{{ 'embed' if embed else '' }}">
 <div class="app">
   <header class="app-head">
     <a class="logo" href="/">{{ d.dog(34) }}<span>StrayWatch</span></a>
@@ -114,6 +116,8 @@ let deferred = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; document.getElementById("install").style.display = "inline-flex"; });
 document.getElementById("install").addEventListener("click", async () => { if (deferred) { deferred.prompt(); deferred = null; } });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+// Inside the website's chat panel: Escape closes the panel.
+if (document.body.classList.contains("embed")) addEventListener("keydown", (e) => { if (e.key === "Escape") parent.postMessage("sw-close-chat", location.origin); });
 
 // ---------- notifications (Web Push)
 const canPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;

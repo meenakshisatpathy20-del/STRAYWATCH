@@ -22,7 +22,7 @@
 </header>
 <aside class="sidebar" id="sidebar" aria-label="Site sections">
   <a class="logo side-logo" href="/">{{ d.dog(40) }}<span>StrayWatch</span></a>
-  <a class="btn coral report-btn" href="/app">🚨 Report an animal</a>
+  <a class="btn coral report-btn" href="/app?go=sos" data-chat="sos">🚨 Report an animal</a>
   {% set nav = [
     ("Start here", [("/", "🏠", "Overview"), ("/demo", "📱", "Live demo"), ("/how", "🧭", "How it works")]),
     ("For citizens", [("/app", "🐾", "Open the app"), ("/lost", "🔎", "Lost & Found"), ("/vet", "🩺", "Vet care")]),
@@ -41,6 +41,27 @@
 {% block content %}{% endblock %}
 <footer class="site-foot">StrayWatch · built in Ranchi by Meenakshi Satpathy, BIT Mesra · <a href="/promise">Safety &amp; privacy</a> · Sample data is marked “Sample”.</footer>
 </main>
+{% if active != "/demo" %}
+<button class="chatfab" id="chatFab" type="button" aria-expanded="false" aria-controls="chatPanel">
+  <span aria-hidden="true">💬</span><span class="chatfab-txt">Report or ask a vet</span>
+</button>
+<div class="chatpanel" id="chatPanel" role="dialog" aria-label="StrayWatch chat" hidden>
+  <div class="chatpanel-head"><b>StrayWatch chat</b>
+    <a href="/app" class="chatpanel-open" title="Open the full app">Full app ↗</a>
+    <button type="button" id="chatClose" aria-label="Close chat">✕</button></div>
+  <iframe id="chatFrame" title="StrayWatch chat" loading="lazy"></iframe>
+</div>
+{% endif %}
+<script>
+(function(){const f=document.getElementById("chatFab");if(!f)return;const p=document.getElementById("chatPanel"),fr=document.getElementById("chatFrame");
+function open(go){if(!fr.src)fr.src="/app?embed=1"+(go?"&go="+go:"");p.hidden=false;f.setAttribute("aria-expanded","true");document.body.classList.add("chat-open");}
+function close(){p.hidden=true;f.setAttribute("aria-expanded","false");document.body.classList.remove("chat-open");f.focus();}
+f.addEventListener("click",()=>p.hidden?open():close());document.getElementById("chatClose").addEventListener("click",close);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!p.hidden)close();});
+addEventListener("message",e=>{if(e.origin===location.origin&&e.data==="sw-close-chat"&&!p.hidden)close();});
+document.querySelectorAll("[data-chat]").forEach(a=>a.addEventListener("click",e=>{if(innerWidth<700)return;e.preventDefault();open(a.dataset.chat);}));
+window.swOpenChat=open;})();
+</script>
 <script>
 (function(){const b=document.getElementById("menuBtn"),s=document.getElementById("sidebar");
 b.addEventListener("click",()=>{const o=s.classList.toggle("open");b.setAttribute("aria-expanded",o);});})();

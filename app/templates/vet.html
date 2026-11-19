@@ -11,7 +11,7 @@
   <div class="card" style="box-shadow:5px 5px 0 var(--mint)">
     <h3 style="font-size:24px">🩺 Talk to a vet</h3>
     <p>Photo + a few words → a verified vet joins the chat. Video call if needed.</p>
-    <a class="btn mint big" href="/app?go=vet" style="width:100%">Start a consult</a>
+    <a class="btn mint big" href="/app?go=vet" data-chat="vet" style="width:100%">Start a consult</a>
     <p class="note" style="margin-top:8px">{{ online|length }} vet{{ '' if online|length == 1 else 's' }} online now · free for street animals · free during the pilot</p>
   </div>
   <div class="card" style="box-shadow:5px 5px 0 var(--coral)">
@@ -23,7 +23,7 @@
   <div class="card" style="box-shadow:5px 5px 0 var(--sky)">
     <h3 style="font-size:24px">🥣 Food &amp; care</h3>
     <p>What to feed dogs, puppies, cats and cows, and “Can I feed this?” for any food, from a reviewed list.</p>
-    <a class="btn sky big" href="/app?go=food" style="width:100%">Check a food</a>
+    <a class="btn sky big" href="/app?go=food" data-chat="food" style="width:100%">Check a food</a>
   </div>
 </div>
 
