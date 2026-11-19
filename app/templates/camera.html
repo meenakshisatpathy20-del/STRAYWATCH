@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Camera AI · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">ordinary road cameras, now watching out for animals</div>
+  <h1>Camera AI</h1>
+  <p>A small box next to a hotspot camera runs YOLOv8 at 1–2 frames a second. When a cow or dog stands or lies in a traffic lane past a time limit, it sends one event to the Agent Room. From there it's a normal case: urgency rules, the right team, timed escalation, proof photo. Cameras are optional: citizen reports work from day one.</p>
+</div>
+
+<section>
+  <ol class="flow">
+    <li><span class="n">1</span><b>Detect + track</b><p>YOLOv8n finds cows and dogs; ByteTrack follows each one across frames.</p><em>~35 ms / frame on a 4-core CPU</em></li>
+    <li><span class="n">2</span><b>Lane check</b><p>Is the animal's position inside this camera's lane polygon?</p></li>
+    <li><span class="n">3</span><b>Two timers</b><p><b>Dwell:</b> in the lane too long (60 s in the pilot). <b>Still:</b> hardly moved for 30 s.</p></li>
+    <li><span class="n">4</span><b>One event</b><p>Snapshot + facts posted to the Agent Room, once per animal.</p><em>REST agent protocol</em></li>
+    <li><span class="n">5</span><b>Case + signboard</b><p>Rules make a blocked main road HIGH; the cattle team is alerted; signboards warn drivers.</p></li>
+  </ol>
+</section>
+
+<section>
+  <div class="section-title"><h2>Latest camera cases</h2><span class="hand">from the edge agent</span></div>
+  {% if demo %}<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><button class="btn sun small" id="replay" type="button">🎥 Replay a real camera event</button><span class="note" id="replayMsg" aria-live="polite">Replays an event our edge agent really produced on recorded road footage.</span></div>{% endif %}
+  <div class="grid3">
+    {% for c in cases %}
+    <a class="card pathcard" href="/room" style="padding:12px">
+      {% if c.photo %}<img src="{{ c.photo }}" alt="Camera snapshot for {{ c.code }}" style="width:100%;border-radius:12px;border:2px solid var(--ink);display:block">{% endif %}
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px"><span class="pill {{ c.level }}">{{ c.level_words }}</span><span class="pill s-{{ c.status }}">{{ c.status_words }}</span></div>
+      <p style="margin:8px 0 0"><b>{{ c.code }}</b> · {{ c.summary }}</p>
+    </a>
+    {% else %}
+    <p class="note">No camera cases yet.{% if demo %} Tap “Replay a real camera event” above.{% endif %}</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section>
+  <div class="section-title"><h2>Signboards for drivers</h2><span class="hand">no app needed</span></div>
+  <div class="grid3">
+    {% for b in boards %}
+    <div class="signboard {{ 'on' if b.show else '' }}">
+      <div class="sb-screen">{% if b.show %}<b>{{ b.message_en }}</b><span>{{ b.message_hi }}</span>{% else %}<b>DRIVE SAFE</b><span>सुरक्षित चलें</span>{% endif %}</div>
+      <small>{{ b.name }}{% if b.cases %} · {{ b.cases|join(", ") }}{% endif %}</small>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="note" style="margin-top:10px">Feed for the city's display boards: <a href="/api/signboards">/api/signboards</a> (JSON). A board warns while a case is open within 500 m of it.</p>
+</section>
+
+<section>
+  <div class="section-title"><h2>What we measured</h2><span class="hand">honest numbers</span></div>
+  <div class="kpis">
+    <div class="stat"><b>✓</b><span>Cow-in-lane alert on real road video (“Stray Cattle in Lutyens Delhi”, CC BY-SA 3.0) with a 10 s test threshold</span></div>
+    <div class="stat"><b>0</b><span>false alarms on ~3 min of animal-free traffic video (2 clips)</span></div>
+    <div class="stat"><b>35 ms</b><span>per frame on a 4-core CPU: a Raspberry Pi 5-class box is enough at 2 fps</span></div>
+    <div class="stat"><b>3 / 7</b><span>street-dog photos right with the pretrained model: fine-tuning on Indian road footage is next</span></div>
+  </div>
+  <p class="note" style="margin-top:10px">Limits today: pretrained model only; tracker ID switches restart a timer; night footage not yet tested. The sample cameras on this page are placeholders until the Ranchi Smart City ICCC partnership.</p>
+</section>
+
+<section>
+  <div class="section-title"><h2>Run it on an edge box</h2></div>
+  <div class="card"><pre class="code">pip install -r edge/requirements-edge.txt
+python edge/camera_agent.py --video rtsp://camera-url --camera ratu-rd-01 \
+    --server https://your-straywatch --key $SW_AGENT_KEY --fps 2 --dwell 60 --still 30</pre></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const rp = document.getElementById("replay");
+if (rp) rp.onclick = async () => { rp.disabled = true; const m = document.getElementById("replayMsg");
+  m.textContent = "Camera agent posting the event; the Triage agent is reading the snapshot…";
+  try { const j = await (await fetch("/api/agents/camera/replay", {method:"POST"})).json(); m.textContent = "Opened " + (j.summary || "no case") + ". Reloading…"; setTimeout(() => location.reload(), 900); }
+  catch (e) { m.textContent = "Replay failed. Try again."; rp.disabled = false; } };
+</script>
+{% endblock %}

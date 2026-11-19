@@ -1,0 +1,4 @@
+# Edge box only (Camera agent). The web server does not need these.
+ultralytics>=8.3
+lap>=0.5
+opencv-python-headless>=4.9

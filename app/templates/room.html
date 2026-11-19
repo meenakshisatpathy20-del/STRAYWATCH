@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Agent Room · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">our own orchestration layer</div>
+  <h1>Agent Room</h1>
+  <p>Every report becomes one case. Six agents and the people on call work from the same ledger: who reported it, what the AI read, which rule fired, who was alerted, who accepted, and the proof photo. This page updates live.</p>
+</div>
+
+<div class="agents" id="agents" aria-label="Agents">
+  {% for a, icon, what in [("Triage","🔍","reads photos + text"),("Identify","🐾","recognises known animals"),("Camera","🎥","watches hotspot lanes"),("Rules","⚖️","sets urgency (code)"),("Dispatch","📣","alerts the right team"),("Watch","⏱️","escalates on time"),("Hotspot","📈","learns where it repeats")] %}
+  <div class="agent" data-agent="{{ a }}"><span class="ai">{{ icon }}</span><div><b>{{ a }}{% if a != "Rules" %} agent{% endif %}</b><small>{{ what }}</small></div><span class="count" title="steps in the last 24 hours">0</span></div>
+  {% endfor %}
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+  <a class="btn coral small" href="/demo">📱 Report a test case in the demo</a>
+  {% if demo %}<button class="btn sun small" id="replay" type="button">🎥 Replay a real camera event</button>{% endif %}
+  <span class="note" id="replayMsg" aria-live="polite"></span>
+</div>
+
+<div class="room">
+  <div class="caselist" id="cases" aria-live="polite"><p class="note">Loading cases…</p></div>
+  <div class="card casedetail" id="detail"><p class="note">Pick a case to see its full ledger.</p></div>
+</div>
+<p class="note">Prototype: this board is public so judges can see it. In the pilot it is behind a login for responders and the duty coordinator. Areas are rounded to about 1 km; no names or phone numbers are shown.</p>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+  const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  let sel = null;
+  async function load(){
+    const j = await (await fetch("/api/room")).json();
+    document.querySelectorAll(".agent").forEach(el => { el.querySelector(".count").textContent = j.agents[el.dataset.agent] || 0; });
+    const box = document.getElementById("cases");
+    if (!j.cases.length) { box.innerHTML = '<p class="note">No cases yet. Report one in the <a href="/demo">live demo</a>.</p>'; return; }
+    if (sel === null) sel = j.cases[0].id;
+    box.innerHTML = j.cases.map(c => `
+      <button class="casecard${c.id===sel?" on":""}" data-id="${c.id}" type="button">
+        ${c.photo ? `<span class="thumb" style="background-image:url('${c.photo}')"></span>` : `<span class="thumb none">${c.source==="camera"?"🎥":"📝"}</span>`}
+        <span class="meta"><b>${esc(c.code)} · ${esc(c.species)}</b>
+        <span class="row"><span class="pill ${c.level}">${esc(c.level_words)}</span><span class="pill s-${c.status}">${esc(c.status_words)}</span></span>
+        <small>${c.source==="camera"?"🎥 camera":"👤 citizen"} · ${esc(c.created)} · ${esc(c.area)}${c.reports>1?` · ${c.reports} reports merged`:""}</small></span>
+      </button>`).join("");
+    box.querySelectorAll(".casecard").forEach(b => b.onclick = () => { sel = +b.dataset.id; load(); });
+    showDetail(sel);
+  }
+  async function showDetail(id){
+    const r = await fetch("/api/room/case/" + id); if (!r.ok) return;
+    const j = await r.json(), c = j.case;
+    document.getElementById("detail").innerHTML = `
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h2 style="font-size:28px;margin-right:6px">${esc(c.code)}</h2>
+      <span class="pill ${c.level}">${esc(c.level_words)}</span><span class="pill s-${c.status}">${esc(c.status_words)}</span></div>
+      <p style="margin:8px 0 4px;font-size:17px">${esc(c.summary)}</p>
+      <p class="note" style="margin:0">Why: ${esc(c.reasons.join("; ") || "–")} · Teams: ${esc(c.teams.join(" → ") || "none")}${c.minutes_to_accept!==null?` · accepted in ${c.minutes_to_accept} min`:""}</p>
+      <div class="photos">${c.photo?`<figure><img src="${c.photo}" alt="Report photo"><figcaption>Report</figcaption></figure>`:""}${c.proof?`<figure><img src="${c.proof}" alt="Proof photo"><figcaption>Proof · ${esc(c.proof_note||"")}</figcaption></figure>`:""}</div>
+      <h3 style="font-size:20px;margin:14px 0 10px">Ledger</h3>
+      <ol class="timeline">${j.events.map(e => `<li class="${e.agent}"><div class="who">${esc(e.at)} · ${esc(e.agent_label)}</div><div class="what">${esc(e.detail)}</div></li>`).join("")}</ol>`;
+  }
+  const rp = document.getElementById("replay");
+  if (rp) rp.onclick = async () => {
+    rp.disabled = true; const m = document.getElementById("replayMsg"); m.textContent = "Camera agent posting a recorded event… the Triage agent is reading the snapshot (a few seconds)";
+    try { const j = await (await fetch("/api/agents/camera/replay", {method:"POST"})).json(); m.textContent = "Done: " + (j.summary || "no case"); sel = j.case ? +j.case.split("-")[1] : sel; }
+    catch(e){ m.textContent = "Replay failed. Try again."; }
+    rp.disabled = false; load();
+  };
+  load(); setInterval(load, 5000);
+})();
+</script>
+{% endblock %}

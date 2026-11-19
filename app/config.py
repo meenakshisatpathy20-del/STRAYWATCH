@@ -40,3 +40,6 @@ PUBLIC_COORD_DECIMALS = 2
 
 # Demo mode seeds sample helpers so the browser demo works without real people.
 DEMO_MODE = os.environ.get("SW_DEMO_MODE", "1") == "1"
+
+# Agent protocol: edge agents (cameras) post events with this key. Empty = only allowed in demo mode.
+AGENT_KEY = os.environ.get("SW_AGENT_KEY", "")

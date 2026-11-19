@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Case {{ c.code }} · StrayWatch{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% if c.status in ("alerting","assigned") %}<meta http-equiv="refresh" content="20">{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">your report</div>
+  <h1>Case {{ c.code }}</h1>
+  <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+    <span class="pill {{ c.level }}">{{ c.level_words }}</span>
+    <span class="pill s-{{ c.status }}">{{ c.status_words }}</span>
+    <span>{{ c.species }} · reported {{ c.created }} · {{ c.area }}</span>
+  </p>
+</div>
+
+<div class="card" style="background:var(--sun-soft)">
+  <h2 style="font-size:26px">{{ c.headline }}</h2>
+  <p style="margin:6px 0 0;font-size:17px">{{ c.next }}</p>
+  {% if c.status != "closed" %}<p style="margin:10px 0 0;font-size:15px">🦺 Stay safe: don't step into traffic or touch a scared animal. Animal ambulance (govt.): <b>1962</b> · If a person is hurt: <b>112</b></p>{% endif %}
+</div>
+
+<div class="cols">
+  <div class="card">
+    <h2 style="font-size:24px;margin-bottom:14px">Every step, as it happened</h2>
+    <ol class="timeline">
+      {% for e in events %}
+      <li class="{{ e.agent }}"><div class="who">{{ e.at }} · {{ e.agent_label }}</div><div class="what">{{ e.detail }}</div></li>
+      {% endfor %}
+    </ol>
+    {% if c.status in ("alerting","assigned") %}<p class="note">This page refreshes by itself every 20 seconds.</p>{% endif %}
+  </div>
+  <div style="display:flex;flex-direction:column;gap:20px">
+    {% if c.photo %}<div class="card" style="padding:12px"><img src="{{ c.photo }}" alt="Your photo of the animal" style="width:100%;border-radius:14px;display:block"><p class="note" style="margin:8px 0 0">Your photo</p></div>{% endif %}
+    {% if c.proof %}<div class="card" style="padding:12px;box-shadow:4px 4px 0 var(--mint)"><img src="{{ c.proof }}" alt="Photo from the responder showing the animal safe" style="width:100%;border-radius:14px;display:block"><p class="note" style="margin:8px 0 0">Proof photo from the responder{% if c.proof_note %}: {{ c.proof_note }}{% endif %}</p></div>{% endif %}
+  </div>
+</div>
+{% endblock %}

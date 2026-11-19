@@ -16,6 +16,25 @@ community dogs and cows, with an optional WhatsApp add-on, powered by the **Bhar
 > "Add to home screen". The WhatsApp add-on is built and tested with simulated Meta webhooks; going live on a WhatsApp
 > number is waiting on Meta business verification.
 
+
+## Round 3 prototype: what's new
+
+| Page | What it shows |
+|---|---|
+| [`/`](https://straywatch-0h6w.onrender.com/) | Overview: the gap, Detect · Respond · Prevent, live counts |
+| [`/demo`](https://straywatch-0h6w.onrender.com/demo) | Two phones: a citizen reports, a responder (caretaker, cattle team, NGO, volunteer, coordinator) gets the alert |
+| [`/room`](https://straywatch-0h6w.onrender.com/room) | **Agent Room**: every case and its ledger, live, with agent activity |
+| [`/camera`](https://straywatch-0h6w.onrender.com/camera) | **Camera agent** results, real camera event replay, signboard preview |
+| [`/city`](https://straywatch-0h6w.onrender.com/city) | City dashboard with the **Hotspot agent** (“cattle team to Ratu Road around 5 PM”) |
+| [`/docs`](https://straywatch-0h6w.onrender.com/docs) | Technical docs, implemented features, limitations, future plans |
+
+- **Urgency rules** (`app/rules.py`): HIGH / CHECK / LOW as plain, unit-tested code; the AI only fills in facts.
+- **Right-team routing**: caretaker → NGO / vet / municipal cattle team / ABC team / traffic police → volunteers → duty coordinator; 3 min per hop for HIGH, 10 min for CHECK.
+- **Photo-proof closing** checked by AI; the reporter sees the proof photo.
+- **Case ledger** (`CaseEvent`) and a private **tracking link** for every reporter (`/track/SW-n?k=…`).
+- **Camera agent at the edge** (`edge/camera_agent.py`): YOLOv8n + ByteTrack, dwell and still timers, posts to `/api/agents/camera/events`.
+- **Signboard feed** (`/api/signboards`) and partner sign-up (`/partners`).
+
 ---
 
 ## Why

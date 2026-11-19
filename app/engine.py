@@ -20,13 +20,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
-from . import ai, config, photos
-from .db import (Animal, Case, CheckIn, LostPost, Sighting, Trace, TranslationCache, User, get_or_create_user, km,
+from . import ai, config, photos, rules
+from .db import (Animal, Case, CaseEvent, CheckIn, LostPost, Sighting, Trace, TranslationCache, User, get_or_create_user, km,
                  nearby, now)
 
 log = logging.getLogger("straywatch.engine")
 DATA = Path(__file__).resolve().parent.parent / "data"
 FIRST_AID = json.loads((DATA / "first_aid.json").read_text(encoding="utf-8"))
+CAMERAS = json.loads((DATA / "cameras.json").read_text(encoding="utf-8"))["cameras"]
 SOURCE_NAMES = {"PFA": "People For Animals", "HW": "Humane World for Animals", "BC": "Blue Cross", "WHO": "WHO"}
 
 
@@ -233,6 +234,8 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
         return seen_step(s, u, text, photo_id, b)
     if flow == "photo_choice":
         return photo_choice(s, u, b)
+    if flow == "proof":
+        return proof_step(s, u, photo_id, b)
 
     # 5. No flow: a photo on its own, or free text.
     if photo_id:
@@ -345,10 +348,44 @@ def sos_step(s, u: User, text: str, photo_id: str | None, b: str) -> list[Out]:
     return create_case(s, u, d)
 
 
-def create_case(s, u: User, d: dict) -> list[Out]:
+RANK = {"LOW": 0, "CHECK": 1, "HIGH": 2}
+LEVEL_WORDS = {"HIGH": "URGENT", "CHECK": "Needs a check", "LOW": "Logged, no rescue needed"}
+TEAM_RADIUS_KM = {"volunteer": None, "caretaker": None}  # None = config.HELPER_RADIUS_KM; teams cover the city
+CITY_RADIUS_KM = 20.0
+
+
+def ledger(s, case: Case, agent: str, kind: str, detail: str, public: bool = True, trace_title: str | None = None):
+    """Write one entry to the case ledger (and to the reporter's live trace on the website)."""
+    s.add(CaseEvent(case_id=case.id, agent=agent, kind=kind, detail=detail[:1000], public=public))
+    if trace_title:
+        step(s, case.reporter_id, trace_title, detail)
+
+
+def track_link(case: Case) -> str:
+    return f"{config.PUBLIC_BASE_URL}/track/SW-{case.id}?k={case.track_key}"
+
+
+def hop_seconds(case: Case) -> int:
+    """Seconds each responder gets. Set by the rules (3 min HIGH, 10 min CHECK); config can shorten it for demos."""
+    rule = (case.hop_minutes or 3) * 60
+    return min(rule, config.ESCALATE_AFTER_SECONDS) if config.DEMO_MODE else rule
+
+
+def hop_words(case: Case) -> str:
+    sec = hop_seconds(case)
+    return f"{sec // 60} minutes" if sec >= 120 else (f"{sec} seconds" if sec < 60 else "1 minute")
+
+
+def wait_words() -> str:
+    sec = config.ESCALATE_AFTER_SECONDS
+    return f"{sec // 60} minutes" if sec >= 120 else (f"{sec} seconds" if sec < 60 else "1 minute")
+
+
+def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
     lat, lon = d["lat"], d["lon"]
     img = photos.data_url(s, d.get("photo"))
     desc = d.get("desc") or ai.describe(s, u.id, img, d.get("text", ""))
+    said_hurt = bool(re.search(INJURY_WORDS, (d.get("text") or "").lower()))
     desc = apply_reporter_words(s, u.id, desc, d.get("text", ""))
     u.state = {}
     if img and not desc["is_animal"] and desc["confidence"] >= 0.7:
@@ -357,24 +394,58 @@ def create_case(s, u: User, d: dict) -> list[Out]:
         return [Out(u.id, "I couldn't see an animal in this photo, so I haven't alerted anyone. If it's dark, "
                           "please describe the animal in words and share the location again.")]
 
-    # Same animal already reported nearby in the last 2 hours? Merge instead of sending a second rescue.
+    # Same animal already reported nearby in the last 60 minutes? Merge instead of sending a second rescue.
     recent = [c for dist, c in nearby(s, Case, lat, lon, 0.2)
-              if c.status in ("alerting", "assigned") and c.created > now() - timedelta(hours=2)
+              if c.status in ("alerting", "assigned") and c.created > now() - timedelta(minutes=60)
               and (c.triage or {}).get("species") == desc["species"]]
     if recent:
         c = recent[0]
+        s.info["last_case_id"] = c.id
         c.merged_reports = (c.merged_reports or 1) + 1
+        ledger(s, c, "Triage", "merged", ("The Camera agent" if source == "camera" else "Another person") +
+               f" reported the same animal ({c.merged_reports} reports). No second rescue was started.")
+        new = rules.decide(rules.facts_from(desc, said_hurt, now()))
+        if RANK.get(new.level, 0) > RANK.get(c.level or "LOW", 0):
+            c.level, c.reasons, c.hop_minutes = new.level, new.reasons, new.hop_minutes
+            c.teams = list(dict.fromkeys(new.teams + list(c.teams or [])))
+            extra = pick_responders(s, c.lat, c.lon, new.teams, exclude={c.reporter_id, *(c.asked or []), *(c.queue or [])})
+            c.queue = extra + list(c.queue or [])
+            ledger(s, c, "Rules", "upgraded", f"New report is more urgent → {new.level}: " + "; ".join(new.reasons),
+                   trace_title="Rules raised urgency")
+            if c.status == "alerting" and extra:
+                c.alerted_at = now() - timedelta(days=1)  # Watch agent moves to the right team on its next tick
         step(s, u.id, "Merged with an open case", f"SW-{c.id} already open ({c.merged_reports} reports), no duplicate rescue")
         if d.get("photo"):
             add_sighting(s, u.id, d["photo"], desc, lat, lon, "sos")
         msg = "Someone already reported this animal and help is " + (
             "on the way. 🙏" if c.status == "assigned" else "being alerted right now. 🙏")
-        return [Out(u.id, f"*Case SW-{c.id}*\n{msg}\nThank you for looking out for them."),
+        return [Out(u.id, f"*Case SW-{c.id}*\n{msg}\nThank you for looking out for them.", link=track_link(c)),
                 Out(u.id, first_aid_text(desc["first_aid_card"]))]
 
-    case = Case(reporter_id=u.id, photo_id=d.get("photo"), triage=desc, lat=lat, lon=lon, status="alerting")
+    dec = rules.decide(rules.facts_from(desc, said_hurt, now()))
+    case = Case(reporter_id=u.id, photo_id=d.get("photo"), triage=desc, lat=lat, lon=lon,
+                status="alerting" if dec.dispatch else "logged", level=dec.level, reasons=dec.reasons,
+                teams=dec.teams, hop_minutes=dec.hop_minutes, source=source, track_key=secrets.token_urlsafe(8)[:10])
     s.add(case)
     s.flush()
+    s.info["last_case_id"] = case.id
+    if source == "camera":
+        ledger(s, case, "Camera", "reported", (d.get("camera_note") or "Camera agent flagged an animal in a lane.") + ".")
+    else:
+        ledger(s, case, "Person", "reported",
+               f"A citizen reported a {desc['species']}" + (" with a photo" if d.get("photo") else " in words") + ".")
+    ledger(s, case, "Triage", "triaged", f"{desc['summary']} (condition: {desc['condition']}, on road: "
+                                         f"{'yes' if desc.get('on_road') else 'no'})")
+    ledger(s, case, "Rules", "ruled", f"{dec.level}: " + "; ".join(dec.reasons), trace_title="Rules set urgency")
+
+    if d.get("photo") and not dec.dispatch:
+        add_sighting(s, u.id, d["photo"], desc, lat, lon, "sos")
+    if not dec.dispatch:
+        ledger(s, case, "Hotspot", "logged", "Added to the hotspot map. No responder disturbed.")
+        return [Out(u.id, f"*Case SW-{case.id} · {LEVEL_WORDS['LOW']}*\n{desc['summary']}\n\nIt is off the road and "
+                          "doesn't look hurt, so I haven't called a rescuer. I've added it to the hotspot map so the "
+                          "city can see where animals gather. Thank you! 💛\nIf that changes, tap below.",
+                    buttons=[(f"case:worse:{case.id}", "It's hurt / on road"), ("menu", "Menu")], link=track_link(case))]
 
     # Is this a known animal? Then its caretaker hears first.
     animal = None
@@ -388,22 +459,30 @@ def create_case(s, u: User, d: dict) -> list[Out]:
                 animal = s.get(Animal, mres["key"])
                 case.animal_id = animal.id
                 step(s, u.id, "Recognised the animal", f"{animal.name} ({mres['confidence']:.0%}): {mres['reason']}")
+                ledger(s, case, "Identify", "identified", f"Recognised {animal.name}, a registered {animal.species} "
+                                                          f"({mres['confidence']:.0%} sure). Caretaker goes first.")
     caretakers = [g for g in (animal.guardians if animal else []) if g != u.id]
-    helpers = pick_helpers(s, lat, lon, exclude={u.id, *caretakers})
-    case.queue = caretakers + helpers
-    step(s, u.id, "Planned who to ask", f"{len(caretakers)} caretaker(s) first, then {len(helpers)} nearby helper(s). "
-                                        f"Each gets {wait_words()} to reply.")
+    responders = pick_responders(s, lat, lon, dec.teams, exclude={u.id, *caretakers})
+    case.queue = caretakers + responders
+    plan = (["caretaker"] if caretakers else []) + dec.teams
+    ledger(s, case, "Dispatch", "planned", "Order: " + " → ".join(rules.TEAM_LABELS[t] for t in plan) +
+           f" → duty coordinator. {len(case.queue)} responder(s) found; each gets {hop_words(case)}.",
+           trace_title="Planned who to ask")
     if d.get("photo"):
         # A recognised registered animal is not someone's lost pet: don't send its photo to lost-poster matching.
         add_sighting(s, u.id, d["photo"], desc, lat, lon, "sos", check=animal is None)
 
-    urg = {"high": "URGENT", "medium": "Needs help soon", "low": "Not urgent", "none": "Not urgent"}[desc["urgency"]]
-    intro = f"*Case SW-{case.id} · {urg}*\n{desc['summary']}"
+    intro = f"*Case SW-{case.id} · {LEVEL_WORDS[dec.level]}*\n{desc['summary']}\nWhy: {'; '.join(dec.reasons)}."
     if animal:
         intro += f"\n\nThis may be *{animal.name}*, a registered community animal. 💛 Their caretaker lives close by, so I'm telling them first."
-    outs = [Out(u.id, intro), Out(u.id, first_aid_text(desc["first_aid_card"]))]
-    outs += alert_next(s, case)
-    return outs
+    alerts = alert_next(s, case)
+    if not animal and case.current_helper:
+        team, _ = responder_label(s, case, case.current_helper)
+        intro += f"\n\nI've alerted the nearest {rules.TEAM_LABELS.get(team, 'helper')}."
+    if case.status == "alerting":
+        intro += "\nYou can follow every step here:"
+    outs = [Out(u.id, intro, link=track_link(case)), Out(u.id, first_aid_text(desc["first_aid_card"]))]
+    return outs + alerts
 
 
 INJURY_WORDS = r"(bleed|blood|khoon|injur|hurt|ghayal|chot|wound|fracture|limp|broken|can'?t walk|not moving|accident|hit by|takkar|gaadi ne|maar|trapped|stuck|phans|fasa|dying|unconscious)"
@@ -431,29 +510,64 @@ def apply_reporter_words(s, uid, desc: dict, text: str) -> dict:
                                              "doesn't show it clearly.")
     elif road and d["species"] in ("cow", "buffalo") and d["first_aid_card"] == "general":
         d["first_aid_card"] = "cattle_on_road"
+    if road and not d.get("on_road"):
+        d["on_road"] = True
     return d
 
 
-def wait_words() -> str:
-    sec = config.ESCALATE_AFTER_SECONDS
-    return f"{sec // 60} minutes" if sec >= 120 else (f"{sec} seconds" if sec < 60 else "1 minute")
+def _alerts_today(s, uid: str) -> int:
+    since = now() - timedelta(days=1)
+    return sum(1 for c in s.scalars(select(Case).where(Case.created >= since)) if uid in (c.asked or []))
 
 
 def pick_helpers(s, lat, lon, exclude: set) -> list[str]:
-    since = now() - timedelta(days=1)
+    """Nearby volunteers (8 km), skipping anyone paused or already at the daily cap."""
     out = []
     for dist, h in nearby(s, User, lat, lon, config.HELPER_RADIUS_KM, is_volunteer=True):
-        if h.id in exclude or (h.state or {}).get("paused"):
+        if h.id in exclude or (h.state or {}).get("paused") or (h.role and h.role != "volunteer"):
             continue
-        asked_today = sum(1 for c in s.scalars(select(Case).where(Case.created >= since)) if h.id in (c.asked or []))
-        if asked_today >= config.MAX_ALERTS_PER_HELPER_PER_DAY:
+        if _alerts_today(s, h.id) >= config.MAX_ALERTS_PER_HELPER_PER_DAY:
             continue
         out.append(h.id)
     return out[:8]
 
 
+def pick_responders(s, lat, lon, teams: list[str], exclude: set) -> list[str]:
+    """Up to 2 nearest people per team, in the order the rules chose. Teams cover the city; volunteers 8 km."""
+    out: list[str] = []
+    for team in teams:
+        if team == "volunteer":
+            ids = pick_helpers(s, lat, lon, exclude | set(out))[:3]
+        else:
+            ids = [h.id for dist, h in nearby(s, User, lat, lon, CITY_RADIUS_KM, role=team)
+                   if h.id not in exclude and h.id not in out and not (h.state or {}).get("paused")][:2]
+        out += ids
+    return out
+
+
+def coordinators(s, case: Case) -> list[str]:
+    return [h.id for dist, h in nearby(s, User, case.lat, case.lon, CITY_RADIUS_KM * 3, role="coordinator")
+            if h.id not in (case.asked or [])]
+
+
+def responder_label(s, case: Case, uid: str) -> tuple[str, bool]:
+    """('caretaker'|team, is_caretaker) for a responder on this case."""
+    if case.animal_id:
+        a = s.get(Animal, case.animal_id)
+        if a and uid in (a.guardians or []):
+            return "caretaker", True
+    h = s.get(User, uid)
+    return (h.role if h and h.role else "volunteer"), False
+
+
 def alert_next(s, case: Case) -> list[Out]:
     q = list(case.queue or [])
+    if not q and case.status == "alerting":
+        coord = coordinators(s, case)
+        if coord:
+            q = coord[:1]
+            ledger(s, case, "Watch", "escalated", "No responder accepted. Escalated to the duty coordinator.",
+                   trace_title="Escalated to coordinator")
     while q:
         hid = q.pop(0)
         h = s.get(User, hid)
@@ -461,44 +575,49 @@ def alert_next(s, case: Case) -> list[Out]:
             continue
         case.queue, case.current_helper, case.alerted_at = q, hid, now()
         case.asked = list(case.asked or []) + [hid]
-        is_caretaker = False
-        name = "an animal"
-        if case.animal_id:
-            a = s.get(Animal, case.animal_id)
-            if a and hid in (a.guardians or []):
-                is_caretaker, name = True, a.name
+        team, is_caretaker = responder_label(s, case, hid)
+        name = s.get(Animal, case.animal_id).name if is_caretaker else "an animal"
         dist = km(h.lat, h.lon, case.lat, case.lon)
         where = f"{dist:.1f} km from you" if dist != float("inf") else "near you"
-        head = (f"*This may be {name}. They need you!* 🚨 (please check the photo)" if is_caretaker
-                else "*An animal near you needs help* 🚨")
         tri = case.triage or {}
-        step(s, case.reporter_id, "Alerted a " + ("caretaker" if is_caretaker else "nearby helper"),
-             f"SW-{case.id} → helper #{len(case.asked)} ({where}). Waiting {wait_words()}.")
+        level = LEVEL_WORDS.get(case.level or "HIGH", "URGENT")
+        if is_caretaker:
+            head = f"*This may be {name}. They need you!* 🚨 (please check the photo)"
+        elif team == "coordinator":
+            head = f"*Duty coordinator: case SW-{case.id} needs an owner* ⚠️ {len(case.asked) - 1} responder(s) didn't take it."
+        else:
+            head = f"*{level}: an animal near you needs help* 🚨"
+        away = f"{dist:.1f} km away" if dist != float("inf") else "nearby"
+        ledger(s, case, "Dispatch", "alerted", f"Alerted {'the caretaker' if is_caretaker else rules.TEAM_LABELS.get(team, team)} "
+                                               f"(responder #{len(case.asked)}, {away}). Waiting {hop_words(case)}.",
+               trace_title="Alerted a " + ("caretaker" if is_caretaker else rules.TEAM_LABELS.get(team, "helper")))
         return [Out(hid, f"{head}\nCase SW-{case.id}: {tri.get('summary', '')}\nWhere: {where}\n"
-                         f"If you can't reply in {wait_words()}, I'll ask the next helper.",
+                         f"If you can't reply in {hop_words(case)}, I'll ask the next one.",
                     image_url=photo_url(case.photo_id),
                     buttons=[(f"case:go:{case.id}", "On my way"), (f"case:no:{case.id}", "Can't make it")])]
     case.queue, case.current_helper = [], None
     if case.status == "alerting":
         case.status = "unanswered"
-        step(s, case.reporter_id, "No helper free", f"SW-{case.id}: everyone nearby was asked. Told the reporter who else to call.")
+        ledger(s, case, "Watch", "unanswered", "Everyone was asked, including the duty coordinator. Case kept open; "
+                                               "new responders nearby will be alerted.", trace_title="No responder free")
         return [Out(case.reporter_id,
-                    f"I'm sorry, no StrayWatch helper near you is free right now (case SW-{case.id}). 🙏\n"
-                    "Please call a local animal welfare group or your municipal corporation's animal helpline. "
-                    "If a person is hurt, call 112.\nI'll keep this case open and alert new helpers who join nearby.")]
+                    f"I'm sorry, no StrayWatch responder near you is free right now (case SW-{case.id}). 🙏\n"
+                    "Please call the government animal ambulance on *1962* or your municipal animal helpline. "
+                    "If a person is hurt, call 112.\nI'll keep this case open and alert new responders who join nearby.")]
     return []
 
 
 def escalate_due(s) -> list[Out]:
-    """Called every ~20 s: anyone who didn't answer in time is skipped."""
+    """The Watch agent, every ~20 s: anyone who didn't answer in their time is skipped."""
     outs = []
-    cutoff = now() - timedelta(seconds=config.ESCALATE_AFTER_SECONDS)
-    for c in s.scalars(select(Case).where(Case.status == "alerting", Case.alerted_at < cutoff)):
-        step(s, c.reporter_id, "No reply in time", f"SW-{c.id}: moving to the next helper.")
+    for c in s.scalars(select(Case).where(Case.status == "alerting", Case.alerted_at.is_not(None))):
+        if c.alerted_at > now() - timedelta(seconds=hop_seconds(c)):
+            continue
+        ledger(s, c, "Watch", "timeout", f"No reply in {hop_words(c)}. Moving on.", trace_title="No reply in time")
         nxt = alert_next(s, c)
         if c.status == "alerting":  # keep the person on the roadside informed, once per hop
-            outs.append(Out(c.reporter_id, f"⏳ Still finding help for case SW-{c.id}. The first person couldn't reply, "
-                                           f"so I've asked helper #{len(c.asked)} nearby. Please stay safe."))
+            outs.append(Out(c.reporter_id, f"⏳ Still finding help for case SW-{c.id}. The last person couldn't reply, "
+                                           f"so I've asked responder #{len(c.asked)}. Please stay safe."))
         outs += nxt
     return outs
 
@@ -515,9 +634,10 @@ def case_button(s, u: User, b: str) -> list[Out]:
             return [Out(u.id, "This case is already closed. Thank you! 💛")]
         c.assigned_to, c.accepted_at, c.status, c.current_helper = u.id, now(), "assigned", u.id
         mins = (c.accepted_at - c.created).total_seconds() / 60
-        step(s, c.reporter_id, "Helper accepted", f"SW-{c.id} accepted after {mins:.1f} min")
-        is_ct = bool(c.animal_id and u.id in (s.get(Animal, c.animal_id).guardians or []))
-        who = "The caretaker" if is_ct else "A StrayWatch helper"
+        team, is_ct = responder_label(s, c, u.id)
+        ledger(s, c, "Person", "accepted", f"{'The caretaker' if is_ct else rules.TEAM_LABELS.get(team, team).capitalize()} "
+                                           f"accepted after {mins:.1f} min.", trace_title="Helper accepted")
+        who = "The caretaker" if is_ct else ("A " + rules.TEAM_LABELS.get(team, "StrayWatch helper"))
         return [
             Out(u.id, f"Thank you! 🙏 The person who found it is waiting nearby.\nCase SW-{c.id}",
                 link=maps_link(c.lat, c.lon), buttons=[(f"case:safe:{c.id}", "It's safe now"),
@@ -528,30 +648,163 @@ def case_button(s, u: User, b: str) -> list[Out]:
     if action == "no":
         if c.current_helper != u.id:
             return [Out(u.id, "No problem, thank you. 💛")]
-        step(s, c.reporter_id, "Helper can't go", f"SW-{c.id}: asking the next one")
+        ledger(s, c, "Person", "declined", "Responder can't go. Asking the next one.", trace_title="Helper can't go")
         nxt = alert_next(s, c)
-        upd = [Out(c.reporter_id, f"⏳ Still finding help for case SW-{c.id}: asking helper #{len(c.asked)} nearby.")] \
+        upd = [Out(c.reporter_id, f"⏳ Still finding help for case SW-{c.id}: asking responder #{len(c.asked)}.")] \
             if c.status == "alerting" else []
         return [Out(u.id, "No problem, I'll ask someone else. 💛")] + upd + nxt
     if action == "safe":
-        c.status, c.closed_at = "closed", now()
-        rep = s.get(User, c.reporter_id)
-        if rep:
-            rep.trust = (rep.trust or 0) + 1
-        mins = (c.closed_at - c.created).total_seconds() / 60
-        step(s, c.reporter_id, "Case closed", f"SW-{c.id} safe after {mins:.0f} min")
-        if c.animal_id:
-            s.add(CheckIn(animal_id=c.animal_id, user_id=u.id, note=f"Rescued (case SW-{c.id})", concern=True))
-        return [Out(u.id, "You're a hero! 🦸💛 Case closed. If the animal needs a vet, please take it to the nearest clinic."),
-                Out(c.reporter_id, f"🎉 Good news! The animal from case SW-{c.id} is safe now. Thank you for caring.")]
+        if c.status == "closed":
+            return [Out(u.id, "This case is already closed. Thank you! 💛")]
+        u.state = {"flow": "proof", "d": {"case": c.id}}
+        return [Out(u.id, f"Great work! 🙏 To close case SW-{c.id}, please send one photo of the animal now "
+                          "(off the road, at the clinic, or being helped). The reporter will see it.",
+                    buttons=[(f"case:nophoto:{c.id}", "Can't take a photo")])]
+    if action == "nophoto":
+        u.state = {}
+        return close_case(s, c, u, None, "Closed without a photo (responder couldn't take one).")
+    if action == "worse":
+        if c.reporter_id != u.id or c.status != "logged":
+            return [Out(u.id, "Thanks, this case is already being handled. 💛")]
+        desc = dict(c.triage or {})
+        desc["condition"] = "injured" if desc.get("condition") in (None, "healthy", "unknown") else desc["condition"]
+        dec = rules.decide(rules.facts_from(desc, True, now()))
+        c.level, c.reasons, c.teams, c.hop_minutes, c.status = dec.level, dec.reasons, dec.teams, dec.hop_minutes, "alerting"
+        ledger(s, c, "Rules", "ruled", f"Reporter says it got worse → {dec.level}: " + "; ".join(dec.reasons),
+               trace_title="Rules set urgency")
+        c.queue = pick_responders(s, c.lat, c.lon, dec.teams, exclude={u.id})
+        return [Out(u.id, f"Thank you for telling me. 🚨 Case SW-{c.id} is now *{LEVEL_WORDS[dec.level]}*. "
+                          "I'm alerting responders now.", link=track_link(c))] + alert_next(s, c)
     if action == "more":
-        c.queue = pick_helpers(s, c.lat, c.lon, exclude={c.reporter_id, *(c.asked or [])})
-        step(s, c.reporter_id, "Extra help requested", f"SW-{c.id}: asking one more helper")
+        c.queue = pick_responders(s, c.lat, c.lon, (c.teams or ["volunteer"]),
+                                  exclude={c.reporter_id, *(c.asked or [])})
+        ledger(s, c, "Person", "more_help", "Responder asked for one more person.", trace_title="Extra help requested")
         nxt = alert_next(s, c) if c.queue else []
         c.status = "assigned"
-        return [Out(u.id, "I'm asking one more helper nearby." if nxt else
-                    "No other helper is free nearby. Please call a local animal welfare group or the municipal helpline.")] + nxt
+        return [Out(u.id, "I'm asking one more responder nearby." if nxt else
+                    "No other responder is free nearby. Please call 1962 (animal ambulance) or the municipal helpline.")] + nxt
     return []
+
+
+def proof_step(s, u: User, photo_id: str | None, b: str) -> list[Out]:
+    """A responder closing a case sends a photo; the AI checks it shows the animal safe."""
+    c = s.get(Case, ((u.state or {}).get("d") or {}).get("case", 0))
+    if not c or c.status == "closed":
+        u.state = {}
+        return [menu(u)]
+    if not photo_id:
+        return [Out(u.id, f"Please send a photo of the animal to close case SW-{c.id}.",
+                    buttons=[(f"case:nophoto:{c.id}", "Can't take a photo")])]
+    chk = ai.proof_check(s, c.reporter_id, photos.data_url(s, c.photo_id), photos.data_url(s, photo_id),
+                         (c.triage or {}).get("species", "animal"))
+    if not chk["ok"]:
+        ledger(s, c, "Dispatch", "proof_rejected", f"Proof photo not accepted: {chk['note']}", public=False)
+        return [Out(u.id, f"I couldn't see the animal safe in that photo ({chk['note']}). Please try another, "
+                          "or tap below.", buttons=[(f"case:nophoto:{c.id}", "Can't take a photo")])]
+    u.state = {}
+    if chk.get("same_animal") is False:
+        ledger(s, c, "Dispatch", "proof_review", "Proof photo may show a different animal: flagged for the duty "
+                                                 "coordinator to review.", public=False)
+    return close_case(s, c, u, photo_id, chk["note"] if chk["checked"] else "Proof photo saved.")
+
+
+def close_case(s, c: Case, u: User, proof_photo: str | None, note: str) -> list[Out]:
+    c.status, c.closed_at, c.proof_photo_id, c.proof_note = "closed", now(), proof_photo, note
+    rep = s.get(User, c.reporter_id)
+    if rep:
+        rep.trust = (rep.trust or 0) + 1
+    mins = (c.closed_at - c.created).total_seconds() / 60
+    ledger(s, c, "Dispatch", "closed", f"Closed after {mins:.0f} min. " + ("Proof photo checked by AI: " if proof_photo else "")
+           + note, trace_title="Case closed")
+    if c.animal_id:
+        s.add(CheckIn(animal_id=c.animal_id, user_id=u.id, photo_id=proof_photo, note=f"Rescued (case SW-{c.id})", concern=True))
+    if c.photo_id or proof_photo:
+        add_sighting(s, u.id, proof_photo or c.photo_id, c.triage or {}, c.lat, c.lon, "rescue", check=False)
+    return [Out(u.id, "You're a hero! 🦸💛 Case closed. If the animal needs a vet, call 1962 or take it to the nearest clinic."),
+            Out(c.reporter_id, f"🎉 Good news! The animal from case SW-{c.id} is safe now. Thank you for caring.",
+                image_url=photo_url(proof_photo), link=track_link(c))]
+
+
+# ------------------------------------------------------------------ CAMERA AGENT
+
+def camera_case(s, cam_id: str, ev: dict, image: bytes) -> tuple[Case | None, list[Out]]:
+    """An edge Camera agent saw an animal in a lane too long. The geometry is fact (code); the AI reads the snapshot."""
+    cam = CAMERAS[cam_id]
+    u = get_or_create_user(s, f"camera:{cam_id}")
+    u.lang, u.name, u.lat, u.lon = "en", cam["name"], cam["lat"], cam["lon"]
+    pid = photos.save(s, image).id
+    secs = ev.get("seconds_in_lane", 0)
+    kind = ev.get("kind", "dwell")
+    note = (f"{cam['name']}: a {ev.get('species', 'animal')} has " +
+            (f"not moved for {secs:.0f} s in a traffic lane" if kind == "still" else f"stayed {secs:.0f} s in a traffic lane"))
+    desc = ai.describe(s, u.id, photos.data_url(s, pid), "Road camera alert. " + note)
+    if not desc["is_animal"] or desc["species"] == "other":
+        desc["is_animal"], desc["species"] = True, ev.get("species", "cow")
+    # Camera geometry is measured, not guessed: the animal IS in the lane.
+    desc.update(on_road=True, blocking_lane=True, road_type=cam.get("road_type", "unknown"))
+    if kind == "still":
+        desc["lying_still"] = True
+        if desc["condition"] == "healthy":
+            desc["condition"] = "unknown"
+    if desc["species"] in ("cow", "buffalo") and desc["first_aid_card"] == "general":
+        desc["first_aid_card"] = "cattle_on_road"
+    s.info.pop("last_case_id", None)
+    outs = create_case(s, u, {"photo": pid, "desc": desc, "lat": cam["lat"], "lon": cam["lon"], "camera_note": note},
+                       source="camera")
+    cid = s.info.pop("last_case_id", None)
+    return (s.get(Case, cid) if cid else None), [o for o in outs if not o.to.startswith("camera:")]
+
+
+PLACES = [("Ratu Road", 23.3905, 85.3050), ("Lalpur", 23.3725, 85.3330), ("Kanke Road", 23.3950, 85.3200),
+          ("Hatia", 23.3300, 85.3000), ("Main Road, Ranchi", 23.3600, 85.3300), ("Doranda", 23.3450, 85.3200)]
+
+
+def place_name(lat, lon) -> str:
+    best = min(PLACES, key=lambda p: km(lat, lon, p[1], p[2]))
+    return best[0] if km(lat, lon, best[1], best[2]) <= 1.5 else f"area {lat:.2f}, {lon:.2f}"
+
+
+def hotspot_actions(s, days: int = 30) -> list[dict]:
+    """Hotspot agent: repeat cattle-on-road reports at the same place and time of day become a concrete action."""
+    since = now() - timedelta(days=days)
+    rows = []
+    for x in s.scalars(select(Sighting).where(Sighting.created >= since)):
+        if x.species in rules.CATTLE and (x.profile or {}).get("on_road"):
+            rows.append((x.lat, x.lon, x.created))
+    for c in s.scalars(select(Case).where(Case.created >= since)):
+        if (c.triage or {}).get("species") in rules.CATTLE and (c.triage or {}).get("on_road"):
+            rows.append((c.lat, c.lon, c.created))
+    groups: dict[tuple, int] = {}
+    for lat, lon, at in rows:
+        hour = rules.ist_hour(at) // 2 * 2  # 2-hour windows
+        key = (place_name(lat, lon), hour)
+        groups[key] = groups.get(key, 0) + 1
+    out = []
+    for (place, hour), n in sorted(groups.items(), key=lambda kv: -kv[1]):
+        if n < 2:
+            continue
+        h12 = lambda x: f"{(x - 1) % 12 + 1} {'AM' if x < 12 or x == 24 else 'PM'}"
+        out.append({"place": place, "hour": hour, "count": n,
+                    "action": f"Send the municipal cattle team to {place} around {h12(hour)}",
+                    "why": f"{n} cattle-on-road reports between {h12(hour)} and {h12(hour + 2)} in the last {days} days"})
+    return out[:6]
+
+
+def signboards(s) -> list[dict]:
+    """Driver warnings for roadside signboards: no app needed (deck slide 2). One entry per camera."""
+    out = []
+    for cam_id, cam in CAMERAS.items():
+        open_cases = [c for d, c in nearby(s, Case, cam["lat"], cam["lon"], 0.5)
+                      if c.status in ("alerting", "assigned", "unanswered") and c.created > now() - timedelta(minutes=45)]
+        cattle = [c for c in open_cases if (c.triage or {}).get("species") in rules.CATTLE]
+        dogs = [c for c in open_cases if (c.triage or {}).get("species") == "dog"]
+        msg = ("CATTLE ON ROAD AHEAD · SLOW DOWN" if cattle else
+               "ANIMAL ON ROAD AHEAD · SLOW DOWN" if dogs or open_cases else "")
+        out.append({"camera_id": cam_id, "name": cam["name"], "lat": cam["lat"], "lon": cam["lon"],
+                    "show": bool(msg), "message_en": msg,
+                    "message_hi": ("आगे सड़क पर पशु · धीरे चलें" if msg else ""),
+                    "cases": [f"SW-{c.id}" for c in open_cases]})
+    return out
 
 
 # ------------------------------------------------------------------ MY ANIMALS

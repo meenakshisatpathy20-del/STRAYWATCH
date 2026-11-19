@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Join as a partner · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">free for shelters, rescuers and communities</div>
+  <h1>Join as a partner</h1>
+  <p>Responders already exist in every city. StrayWatch makes sure the right case reaches them faster, with a photo and the exact spot. Pick how you'd like to help.</p>
+</div>
+
+<div class="grid3">
+  <div class="card" style="box-shadow:5px 5px 0 var(--sun)"><h3>🦸 Volunteer</h3><p>Get alerts for hurt animals within 8 km. At most 6 a day; pause any time.</p><a class="btn sun small" href="/app">Join in the app (type “volunteer”)</a></div>
+  <div class="card" style="box-shadow:5px 5px 0 var(--coral)"><h3>🏥 NGO, shelter or vet</h3><p>Receive SOS cases for your wards with photo + map pin. You choose hours, area and a daily limit. 3-month pilot, free.</p></div>
+  <div class="card" style="box-shadow:5px 5px 0 var(--sky)"><h3>🏛️ Municipal team or police</h3><p>Cattle-on-road and aggressive-dog cases reach the right desk, plus hotspot reports by road and hour.</p></div>
+  <div class="card" style="box-shadow:5px 5px 0 var(--mint)"><h3>📱 Community or Instagram page</h3><p>Share lost posters and our caretaker survey; co-run a “register your street's dogs” drive.</p></div>
+  <div class="card"><h3>🩺 Vet reviewer</h3><p>Review our first-aid and health cards (about 1 hour) so every tip is safe.</p></div>
+  <div class="card"><h3>💛 What we promise</h3><p>No phone numbers shared. No data sold. Leave any time. For animals, never against them.</p></div>
+</div>
+
+<section>
+  <div class="section-title"><h2>Tell us about you</h2><span class="hand">we'll reply within 2 days</span></div>
+  {% if sent %}
+  <div class="card" style="background:var(--mint-soft)"><h3>Thank you! 🙏</h3><p>We've saved your details and will get in touch soon.</p></div>
+  {% else %}
+  <form class="card form" method="post" action="/partners">
+    <label>Your name<input name="name" required maxlength="80" autocomplete="name"></label>
+    <label>Organisation or page (optional)<input name="org" maxlength="120"></label>
+    <label>I am a…<select name="kind" required>
+      <option value="ngo">NGO or shelter</option><option value="vet">Vet or clinic</option><option value="municipal">Municipal team</option>
+      <option value="police">Traffic police</option><option value="community">Community or Instagram page</option><option value="volunteer">Volunteer</option><option value="other">Other</option></select></label>
+    <label>Phone or email<input name="contact" required maxlength="120" autocomplete="email"></label>
+    <label>City / ward<input name="area" maxlength="80" placeholder="e.g. Lalpur, Ranchi"></label>
+    <label class="wide">Anything we should know? (optional)<textarea name="note" rows="3" maxlength="800" placeholder="e.g. cases you see most, hours you can respond"></textarea></label>
+    <label class="wide check"><input type="checkbox" name="consent" value="yes" required> I agree that StrayWatch stores these details only to contact me about partnering (DPDP 2023). I can ask for them to be deleted any time.</label>
+    <button class="btn coral" type="submit">Send</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}
