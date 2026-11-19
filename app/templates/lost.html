@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Lost &amp; Found · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">recognise anyone?</div>
+  <h1>Lost &amp; Found</h1>
+  <p>Lost a cow or dog? Post one photo in the app. The Identify agent checks it against every photo people sent nearby in the last 14 days, and every new photo after that, and messages you when one looks like yours.</p>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px">
+  <a class="btn sun" href="/app">📣 Post a lost animal</a>
+  <a class="btn" href="/app">👀 I saw one of these</a>
+</div>
+<div class="grid3 board">
+  {% for p in posts %}
+  <article class="card post" style="box-shadow:4px 4px 0 {{ 'var(--mint)' if p.status=='found' else 'var(--ink)' }}">
+    <div class="pic" role="img" aria-label="Photo of {{ p.name }}" style="background-image:url('{{ p.photo }}')"></div>
+    <div class="row"><h3>{{ p.name }} · {{ p.species }}</h3><span class="tag {{ 'found' if p.status=='found' else 'lost' }}">{{ 'HOME!' if p.status=='found' else 'LOST' }}</span></div>
+    {% if p.status=='found' %}<p>Back home after {{ p.found_hours }} hours, thanks to a neighbour's photo. 💛</p>
+    {% else %}<p>{{ p.looks or 'See photo' }} · last seen {{ p.area }} · {{ p.when }}</p>
+    <a class="btn sun small" href="/lost/{{ p.code }}">I've seen {{ p.name }}</a>{% endif %}
+  </article>
+  {% else %}<p>No lost animals right now. 💛</p>{% endfor %}
+</div>
+<p class="note">Posters show an area, never an exact spot. Owners are contacted through StrayWatch, never by phone number. Sample posters are marked in the data as samples.</p>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Live demo · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">try it, it's real</div>
+  <h1>Live demo: report an animal in 3 taps</h1>
+  <p>This is the real app talking to the real AI. Pick a scenario, or type and send your own photo. The left phone is the citizen. The right phone shows the responder who gets the alert, in their own language.</p>
+</div>
+
+<ol class="steps3" aria-label="How to report">
+  <li><span class="n">1</span><b>Tap “Hurt animal: SOS”</b><p>No sign-up, no app store. Works in any phone browser, in 6 languages.</p></li>
+  <li><span class="n">2</span><b>Send a photo, or just words</b><p>“kutta ghayal hai” is enough. At night, words alone work.</p></li>
+  <li><span class="n">3</span><b>Share your location</b><p>You get a case number and a link to track every step until the animal is safe.</p></li>
+</ol>
+
+<div class="samples" role="group" aria-label="Scenarios">
+  <span class="hand" style="font-size:20px">pick a scenario →</span>
+  <button class="btn coral small" data-sample="sos">🐕 Hurt dog (Hinglish)</button>
+  <button class="btn sun small" data-sample="cow">🐄 Cows blocking a road</button>
+  <button class="btn sky small" data-sample="lost">🔎 My cow is lost</button>
+  <button class="btn mint small" data-sample="register">💛 Register a street dog</button>
+  <button class="btn small" data-sample="checkin">📸 Daily check-in</button>
+  <button class="btn small" data-sample="reset">↺ Start over</button>
+</div>
+
+<div class="stage" id="stage">
+  <figure class="device">
+    <figcaption>👤 Citizen</figcaption>
+    <div class="device-screen phone" aria-label="Citizen's chat with StrayWatch">
+      <div class="phone-head"><div class="av">{{ d.dog(32) }}</div><div><b>StrayWatch</b><small>online · replies in seconds</small></div></div>
+      <div class="msgs" id="msgs" aria-live="polite"></div>
+      <form class="composer" id="composer">
+        <label class="icon-btn" title="Send a photo"><span class="sr">Send a photo</span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <input type="file" id="file" accept="image/*" hidden>
+        </label>
+        <button type="button" class="icon-btn loc" id="locbtn" title="Share location" aria-label="Share location">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#FF8A7A" stroke="#2B2340" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5" fill="#fff"/></svg>
+        </button>
+        <label for="text" class="sr">Message</label>
+        <input type="text" id="text" placeholder="Type in any language…" autocomplete="off">
+        <button class="icon-btn" aria-label="Send" style="background:var(--sun)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+    </div>
+  </figure>
+
+  <figure class="device">
+    <figcaption>🦺 Responder</figcaption>
+    <div class="device-screen phone" aria-label="Responder phones">
+      <div class="tabs" role="group" aria-label="Whose phone">
+        <button aria-pressed="true" data-as="demo:priya">Priya · caretaker (हिंदी)</button>
+        <button aria-pressed="false" data-as="demo:cattle">Cattle team</button>
+        <button aria-pressed="false" data-as="demo:ngo">NGO</button>
+        <button aria-pressed="false" data-as="demo:arjun">Volunteer</button>
+        <button aria-pressed="false" data-as="demo:coord">Coordinator</button>
+      </div>
+      <div class="msgs" id="helper"><div class="typing">Alerts for this responder will appear here…</div></div>
+      <div class="composer" style="justify-content:space-between">
+        <span class="note" style="margin:0">Closing a case needs a photo →</span>
+        <label class="btn small mint" style="cursor:pointer">📷 Proof photo<input type="file" id="helperFile" accept="image/*" hidden></label>
+      </div>
+    </div>
+  </figure>
+
+  <div class="trace stage-trace" aria-live="polite">
+    <h3>🤖 What the agents are doing</h3>
+    <ol id="trace"><li class="empty">Every AI step and rule decision shows up here, with the model used and how long it took.</li></ol>
+    <p class="note" style="margin-top:12px">Then open the <a href="/room">Agent Room</a> to see the whole case ledger.</p>
+  </div>
+</div>
+
+<div class="note">Priya, the cattle team, the NGO, Arjun and the coordinator are <b>sample responders</b> so you can play both sides. Real responders get these alerts in the app, or on WhatsApp. The cow photo is a frame from “Stray Cattle in Lutyens Delhi” (Fowler&amp;fowler, CC BY-SA 3.0).</div>
+{% endblock %}
+{% block scripts %}<script src="/static/app.js"></script>{% endblock %}

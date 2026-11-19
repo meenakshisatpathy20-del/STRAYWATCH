@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Tech docs &amp; status · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">for judges, partners and developers</div>
+  <h1>Tech docs &amp; status</h1>
+  <p>What StrayWatch is built from, what works today, what doesn't yet, and what comes next. Source code: <a href="https://github.com/meenakshisatpathy20-del/straywatch">github.com/meenakshisatpathy20-del/straywatch</a>.</p>
+</div>
+
+<section>
+  <div class="section-title"><h2>Architecture</h2><span class="hand">every input becomes one case; every agent works from one ledger</span></div>
+  <div class="arch">
+    <div class="arch-col"><div class="arch-h">Inputs</div>
+      <div class="arch-box">📱 StrayWatch app (installable PWA)</div><div class="arch-box">💬 WhatsApp add-on</div><div class="arch-box">🎥 Camera agent (YOLOv8 at the edge)</div></div>
+    <div class="arch-arrow" aria-hidden="true">→</div>
+    <div class="arch-col arch-room"><div class="arch-h">Agent Room (FastAPI)</div>
+      <div class="arch-box">Channel adapters → one event format</div>
+      <div class="arch-grid"><span>🔍 Triage</span><span>🐾 Identify</span><span>📣 Dispatch</span><span>⏱️ Watch</span><span>🎥 Camera</span><span>📈 Hotspot</span></div>
+      <div class="arch-box" style="background:var(--coral-soft)">⚖️ Urgency rules (unit-tested code)</div>
+      <div class="arch-box" style="background:var(--mint-soft)">🗂️ Case ledger · Postgres (SQLite locally)</div>
+      <div class="arch-box" style="background:var(--sky-soft)">🧠 Model gateway · BharatCode API: qwen3.5-397b (vision), gemma-4-31b-it</div></div>
+    <div class="arch-arrow" aria-hidden="true">→</div>
+    <div class="arch-col"><div class="arch-h">Outputs</div>
+      <div class="arch-box">🚨 Responder alerts (in their language)</div><div class="arch-box">🔗 Reporter tracking link</div><div class="arch-box">🏙️ City dashboard + hotspots</div><div class="arch-box">🪧 Signboard feed</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-title"><h2>What works today</h2><span class="hand">honest status, Nov 2026</span></div>
+  <div class="tablebox card" style="padding:0">
+    <table class="cmp">
+      <thead><tr><th>Feature</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for f, st, note in [
+          ("Citizen reporting (photo or words, 6 languages)", "Working", "Live web app; Hinglish understood; no sign-up"),
+          ("Triage + Identify agents", "Working", "Vision LLM, strict JSON validated field by field; caretaker first at 95%+"),
+          ("Urgency rules HIGH / CHECK / LOW", "Working", "Deck slide 7 as plain code; unit-tested"),
+          ("Right-team routing", "Working", "Caretaker → NGO / vet / municipal cattle / ABC / police → volunteers (sample teams)"),
+          ("Watch agent + duty coordinator", "Working", "3 min (HIGH) / 10 min (CHECK) per hop; reporter updated each hop"),
+          ("Photo-proof closing", "Working", "AI checks the proof photo shows the animal safe; reporter sees it"),
+          ("Case ledger, Agent Room, tracking link", "Working", "Every hand-off recorded and replayable"),
+          ("Camera agent → cases", "Working on recorded video", "YOLOv8n + ByteTrack, dwell + still timers, 35 ms/frame"),
+          ("Hotspot agent + signboard feed", "Working", "Road × hour actions; JSON feed for display boards"),
+          ("Lost & Found", "Working", "Searches past and future sightings nearby"),
+          ("WhatsApp add-on", "Built", "Tested with simulated webhooks; waiting on Meta verification"),
+          ("Vet care", "In progress", "1962 + find a vet live; health check, nutrition, vet handover next"),
+          ("SMS / IVR, Telegram", "Planned", "Same channel adapter"),
+          ("Redis event bus, PostGIS", "Planned for scale", "Today: in-process events, bounding box + haversine distance"),
+        ] %}
+        <tr><td><b>{{ f }}</b></td><td><span class="pill {{ 'LOW' if st.startswith('Working') else ('CHECK' if st in ('Built','In progress') else 's-logged') }}">{{ st }}</span></td><td>{{ note }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="section-title"><h2>Measured</h2></div>
+  <div class="kpis">
+    <div class="stat"><b>~2–3 s</b><span>Triage agent reads a photo + message</span></div>
+    <div class="stat"><b>11/11</b><span>animals re-identified among look-alikes, ~1.2 s each (edited copies of photos)</span></div>
+    <div class="stat"><b>~10 s</b><span>report → caretaker alerted, on the free live server</span></div>
+    <div class="stat"><b>35 ms</b><span>Camera agent per frame on a 4-core CPU</span></div>
+    <div class="stat"><b>0</b><span>wrong-city or beyond-8 km alerts in a 1,238-report, two-city load test</span></div>
+    <div class="stat"><b>{{ tests }}</b><span>automated tests, run in GitHub Actions</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="section-title"><h2>Limitations</h2><span class="hand">what we're careful not to claim</span></div>
+  <ul class="card" style="margin:0;padding:18px 18px 18px 38px">
+    <li>Responder teams on this site are <b>samples</b>. Real NGOs, vets and municipal teams join in the pilot.</li>
+    <li>Camera AI uses a pretrained model: cows are reliable, street dogs are not yet (3/7). Fine-tuning on Indian road footage and night video is next.</li>
+    <li>Re-identification was tested on edited copies of the same photos, which is easier than real life.</li>
+    <li>The free server sleeps when idle; the first request can take up to a minute.</li>
+    <li>The AI can misread a photo. That's why rules decide urgency, the reporter's words win, and people confirm matches.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="section-title"><h2>What comes next</h2></div>
+  <ol class="flow">
+    <li><span class="n">1</span><b>Vet care</b><p>Health check with vet-reviewed cards, nutrition, vet handover summary.</p></li>
+    <li><span class="n">2</span><b>Voice notes</b><p>Report by speaking Hindi or any of the 6 languages.</p></li>
+    <li><span class="n">3</span><b>Ranchi pilot</b><p>2 wards, 1 NGO, municipal cattle team, 5 hotspot cameras via ICCC. 3 months.</p></li>
+    <li><span class="n">4</span><b>Scale</b><p>A new city is configuration: responders, ward boundaries, escalation rules, languages.</p></li>
+  </ol>
+</section>
+
+<section>
+  <div class="section-title"><h2>API</h2></div>
+  <div class="tablebox card" style="padding:0"><table class="cmp">
+    <thead><tr><th>Endpoint</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>POST /api/chat</code></td><td>One chat turn (text, button, photo or location). The app and website demo use it.</td></tr>
+      <tr><td><code>POST /api/agents/camera/events</code></td><td>Edge Camera agent event (X-Agent-Key). Opens or merges a case.</td></tr>
+      <tr><td><code>GET /api/room</code></td><td>Agent Room board: recent cases and agent activity.</td></tr>
+      <tr><td><code>GET /api/signboards</code></td><td>Driver warnings for display boards near cameras.</td></tr>
+      <tr><td><code>POST /webhook/whatsapp</code></td><td>WhatsApp Cloud API webhook (signature checked).</td></tr>
+      <tr><td><code>GET /track/SW-n?k=…</code></td><td>The reporter's private tracking page.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="card" style="margin-top:16px"><pre class="code">pip install -r requirements.txt
+export ADAPTION_API_KEY=...          # BharatCode model API
+uvicorn app.main:app --reload        # http://localhost:8000
+python -m pytest -q tests            # offline tests with a stand-in AI</pre></div>
+</section>
+{% endblock %}
