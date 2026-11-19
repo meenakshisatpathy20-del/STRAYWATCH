@@ -265,3 +265,12 @@ pre.code{margin:0;white-space:pre-wrap;font-size:14px;background:#1b1626;color:#
 @media (max-width:900px){.arch{grid-template-columns:1fr}.arch-arrow{transform:rotate(90deg);justify-self:center}}
 @media (max-width:700px){.agents{grid-template-columns:repeat(2,1fr);gap:8px}.agent{padding:6px 8px}.agent small{display:none}.agent b{font-size:15px}}
 .pill.s-cancelled{background:#eee}
+
+/* ---------- maps ---------- */
+.mapbox{height:440px;border:2.5px solid var(--ink);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;background:#e8eef3}
+.mapbox.small{height:300px}
+.maplegend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:13px;font-weight:700;color:var(--ink2)}
+.maplegend i{display:inline-block;width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);margin-right:5px;vertical-align:-1px}
+.sw-cam{font-size:20px;line-height:26px;text-align:center;background:#fff;border:2px solid var(--ink);border-radius:50%}
+.leaflet-popup-content{font:600 13px Nunito,sans-serif}
+@media (max-width:700px){.mapbox{height:340px}}

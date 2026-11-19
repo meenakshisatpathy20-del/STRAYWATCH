@@ -628,6 +628,36 @@ async def camera_replay(which: str = "lying"):
     return await asyncio.to_thread(_camera_event, _json.loads(sample.read_text()))
 
 
+@app.get("/api/map")
+def api_map(days: int = 30):
+    """Map layers for the city dashboard and Agent Room. Every location is rounded to ~1 km; no people are shown."""
+    from datetime import timedelta as td
+    from .db import now as _now
+    since = _now() - td(days=max(1, min(days, 90)))
+    rnd = lambda x: round(x, config.PUBLIC_COORD_DECIMALS)
+    with SessionLocal() as s:
+        cases = []
+        for c in s.scalars(select(Case).where(Case.created >= since).order_by(Case.id.desc()).limit(400)):
+            t = c.triage or {}
+            cases.append({"id": c.id, "code": f"SW-{c.id}", "lat": rnd(c.lat), "lon": rnd(c.lon), "level": c.level or "HIGH",
+                          "status": c.status, "species": t.get("species", "animal"), "source": c.source or "citizen",
+                          "on_road": bool(t.get("on_road")), "when": engine.ist(c.created)})
+        cattle = {}
+        for x in s.scalars(select(Sighting).where(Sighting.created >= since)):
+            if x.species in ("cow", "buffalo") and (x.profile or {}).get("on_road"):
+                k = (rnd(x.lat), rnd(x.lon))
+                cattle[k] = cattle.get(k, 0) + 1
+        hot = engine.hotspot_actions(s, days)
+        hot_pts = []
+        for h in hot:
+            p = next((pl for pl in engine.PLACES if pl[0] == h["place"]), None)
+            if p:
+                hot_pts.append({"lat": p[1], "lon": p[2], "count": h["count"], "action": h["action"], "why": h["why"]})
+        cams = [{"id": k, "name": v["name"], "lat": v["lat"], "lon": v["lon"]} for k, v in engine.CAMERAS.items()]
+        return {"cases": cases, "hotspots": hot_pts, "cameras": cams, "center": list(config.CITY_CENTER),
+                "cattle": [{"lat": k[0], "lon": k[1], "count": n} for k, n in cattle.items()]}
+
+
 @app.get("/api/signboards")
 def api_signboards():
     """JSON feed for roadside signboards near hotspot cameras."""

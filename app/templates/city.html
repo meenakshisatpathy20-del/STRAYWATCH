@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}City dashboard · StrayWatch{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">{% endblock %}
 {% block content %}
 <div class="page-head">
   <div class="hand">for NGOs &amp; municipalities</div>
@@ -15,6 +16,12 @@
   <div class="stat"><b>{{ c.vax_pct }}%</b><span>known dogs and cats rabies-vaccinated in the last year ({{ c.vax }}/{{ c.vax_base }})</span><div class="bar"><i style="width:{{ c.vax_pct }}%"></i></div></div>
   <div class="stat"><b>{{ c.found }}/{{ c.lost }}</b><span>lost animals back home{% if c.median_found_h is not none %} · median {{ c.median_found_h }} h{% endif %}</span></div>
 </div>
+
+<section>
+  <div class="section-title"><h2>🗺️ Map</h2><span class="hand">last 30 days · areas rounded to ~1 km</span></div>
+  <div id="citymap" class="mapbox" role="region" aria-label="Map of cases, injury hotspots and cameras"></div>
+  <div class="maplegend"><span><i style="background:#FF6B5B"></i>Urgent</span><span><i style="background:#FFC21A"></i>Needs care</span><span><i style="background:#9AA3AE"></i>Healthy, no case</span><span><i style="background:#FF8A7A;border-style:dashed;border-color:#C8322B"></i>Injury hotspot</span><span><i style="background:#5BC0EB"></i>Cattle on roads (traffic)</span><span>🎥 Camera</span><span>Faded = closed</span></div>
+</section>
 
 <section>
   <div class="section-title"><h2>📈 Hotspot agent: where animals keep getting hurt</h2><span class="hand">same road, same hour</span></div>
@@ -57,4 +64,9 @@
   </div>
   <p class="note" style="margin-top:10px">Prototype data from Ranchi, including sample data. Weekly report and CSV export are planned for the pilot.</p>
 </section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/vendor/leaflet/leaflet.js"></script>
+<script src="/static/map.js"></script>
+<script>swMap("citymap");</script>
 {% endblock %}
