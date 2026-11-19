@@ -182,6 +182,24 @@ class PartnerLead(Base):
     created: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 
+class PushSub(Base):
+    """A phone/browser that asked for notifications (Web Push). Alerts reach it even when the app is closed."""
+    __tablename__ = "push_subs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(80), index=True)
+    endpoint: Mapped[str] = mapped_column(Text)
+    p256dh: Mapped[str] = mapped_column(String(200))
+    auth: Mapped[str] = mapped_column(String(80))
+    created: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
+class Setting(Base):
+    """Small server settings that must survive restarts (e.g. the Web Push signing key)."""
+    __tablename__ = "settings"
+    key: Mapped[str] = mapped_column(String(40), primary_key=True)
+    value: Mapped[str] = mapped_column(Text)
+
+
 class TranslationCache(Base):
     __tablename__ = "translations"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
