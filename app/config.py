@@ -46,6 +46,7 @@ AGENT_KEY = os.environ.get("SW_AGENT_KEY", "")
 
 # Typed landmarks -> coordinates (OpenStreetMap Nominatim). Bias towards the pilot city.
 GEOCODER_URL = os.environ.get("SW_GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
+GEOCODER_FALLBACK_URL = os.environ.get("SW_GEOCODER_FALLBACK_URL", "https://photon.komoot.io/api/")
 CITY_CENTER = (float(os.environ.get("SW_CITY_LAT", "23.3441")), float(os.environ.get("SW_CITY_LON", "85.3096")))
 
 # Abuse limits for reporters

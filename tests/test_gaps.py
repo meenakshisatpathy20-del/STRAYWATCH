@@ -77,3 +77,21 @@ def test_tracking_page_speaks_the_reporters_language(s, monkeypatch):
     c = s.query(Case).one()
     tr = engine.translate_texts(s, ["Every step, as it happened", main.case_view(s, c)["headline"]], "hi")
     assert all(v.startswith("HI:") for v in tr.values())
+
+
+def test_landmark_lookup_tries_simpler_forms_and_a_second_service(monkeypatch):
+    geo._cache.clear()
+    assert geo.variants("Lalpur Chowk, Ranchi")[:2] == ["Lalpur Chowk, Ranchi", "Lalpur, Ranchi"]
+    calls = []
+    monkeypatch.setattr(geo, "_nominatim", lambda q, a, b: calls.append(("n", q)) or [])
+    monkeypatch.setattr(geo, "_photon", lambda q, a, b: calls.append(("p", q)) or (
+        [{"lat": 23.37, "lon": 85.33, "label": "Lalpur, Ranchi"}] if q == "Lalpur, Ranchi" else []))
+    hit = geo.geocode("Lalpur Chowk, Ranchi")
+    assert hit["label"] == "Lalpur, Ranchi" and ("n", "Lalpur Chowk, Ranchi") in calls
+
+
+def test_a_same_named_place_far_away_is_never_used(monkeypatch):
+    geo._cache.clear()
+    monkeypatch.setattr(geo, "_nominatim", lambda q, a, b: [{"lat": 28.6, "lon": 77.2, "label": "Lalpur, Delhi"}])
+    monkeypatch.setattr(geo, "_photon", lambda q, a, b: [])
+    assert geo.geocode("Lalpur") is None
