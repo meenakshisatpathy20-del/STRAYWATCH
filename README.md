@@ -45,8 +45,10 @@ hurt, it's treated as hurt; if the photo is unclear, StrayWatch asks instead of 
 
 | | |
 |---|---|
-| ![Overview](docs/screenshots/01-overview.jpg) | ![Live demo: SOS](docs/screenshots/02-demo-sos.jpg) |
-| **Overview** | **Live demo:** a Hinglish SOS; the responder's phone gets the alert |
+| ![Overview](docs/screenshots/01-overview.jpg) | ![What's new](docs/screenshots/11-whats-new.jpg) |
+| **Overview** (chat button bottom-right on every page) | **The idea in one line, what's new, today vs StrayWatch** |
+| ![Live demo: SOS](docs/screenshots/02-demo-sos.jpg) | ![Vet care page](docs/screenshots/12-vet-page.jpg) |
+| **Live demo:** a Hinglish SOS; the responder's phone gets the alert | **Vet care:** verified vets online, emergencies to 1962 |
 | ![Vet consult](docs/screenshots/03-vet-consult.jpg) | ![Agent Room](docs/screenshots/04-agent-room.jpg) |
 | **Vet consult:** pre-check, care card, a verified vet joins | **Agent Room:** every case and its ledger, live |
 | ![City map](docs/screenshots/05-city-map.jpg) | ![Camera AI](docs/screenshots/06-camera-ai.jpg) |
