@@ -1,0 +1,161 @@
+{
+  "_note": "Safe-first care cards shown BEFORE and alongside an online vet. The AI only CHOOSES a card and an urgency; it never writes medical advice, names a medicine or gives a dose. Status: drafted from the sources below; awaiting review by a partner veterinarian before launch.",
+  "_sources": {
+    "FIAPO": "FIAPO, First aid for street animals (leaflet): https://www.pashudhanpraharee.com/wp-content/uploads/2023/10/first-aid-leaflet.pdf",
+    "DAHD": "Dept. of Animal Husbandry & Dairying, Standard Veterinary Treatment Guidelines: https://dahd.gov.in/sites/default/files/2024-10/StandardVeterinaryTreatment.pdf",
+    "DTE": "Down To Earth, Lumpy skin disease (vaccination and isolation): https://www.downtoearth.org.in/news/health/lumpy-skin-disease-outbreak-shows-livestock-diseases-are-not-just-about-animals-here-is-why-85881",
+    "ASPCA": "ASPCA Animal Poison Control, People foods to avoid feeding pets: https://www.aspca.org/pet-care/aspca-poison-control/people-foods-avoid-feeding-your-pets",
+    "WHO": "World Health Organization, Rabies fact sheet: https://www.who.int/news-room/fact-sheets/detail/rabies",
+    "PFA": "People For Animals India, Emergency first aid: https://www.peopleforanimalsindia.org/public/first-aid"
+  },
+  "urgency_words": {
+    "emergency": "Emergency: go to a vet or call 1962 now",
+    "today": "See a vet today",
+    "this_week": "See a vet in the next few days",
+    "watch": "Watch at home and talk to a vet if it doesn't improve"
+  },
+  "cards": {
+    "maggot_wound": {
+      "title": "Wound with maggots (worms in a wound)",
+      "species": ["dog", "cat", "cow", "buffalo", "goat", "other"],
+      "urgency": "today",
+      "do_now": ["Keep flies away: cover the area loosely with a clean cloth if the animal allows it.", "Keep the animal in shade and offer clean water.", "Note where the wound is and how big it looks, for the vet."],
+      "dont": ["Don't pour kerosene, petrol, phenyl, acid or engine oil on the wound. They burn and poison the animal.", "Don't try to pull maggots out deep inside the wound yourself."],
+      "see_vet": "Maggots eat living tissue and spread fast. A vet should clean and treat it today.",
+      "sources": ["FIAPO", "PFA"]
+    },
+    "vomiting_diarrhoea": {
+      "title": "Vomiting or loose motions",
+      "species": ["dog", "cat", "other"],
+      "urgency": "today",
+      "do_now": ["Keep clean drinking water available in small amounts.", "Keep a puppy or kitten warm and away from other dogs.", "Note how many times, and whether there is blood."],
+      "dont": ["Don't give human medicines.", "Don't force food."],
+      "see_vet": "In puppies, vomiting with bloody motions can be parvovirus, which is deadly and spreads to other dogs. See a vet today; sooner if there is blood, weakness or the animal stops drinking.",
+      "sources": ["DAHD", "FIAPO"]
+    },
+    "not_eating": {
+      "title": "Not eating or very weak",
+      "species": ["dog", "cat", "cow", "buffalo", "goat", "other"],
+      "urgency": "this_week",
+      "do_now": ["Offer clean water and a little of the animal's usual food.", "Check for ticks, wounds or a swollen belly.", "Note since when it stopped eating."],
+      "dont": ["Don't force-feed.", "Don't give human medicines or tonics."],
+      "see_vet": "Not eating for more than a day, or with fever, weakness or pale gums, needs a vet soon.",
+      "sources": ["DAHD"]
+    },
+    "skin_itching": {
+      "title": "Itching, hair loss or skin sores (mange)",
+      "species": ["dog", "cat", "other"],
+      "urgency": "this_week",
+      "do_now": ["Keep the animal's bedding clean.", "Wash your hands after touching it; some mange spreads to other animals and people.", "Take a clear photo of the skin for the vet."],
+      "dont": ["Don't apply engine oil, kerosene or harsh chemicals.", "Don't shave or scrub wounds."],
+      "see_vet": "Mange is treatable, but the right medicine depends on the type. A vet should see it in the next few days.",
+      "sources": ["FIAPO", "DAHD"]
+    },
+    "ticks_fever": {
+      "title": "Ticks, fever or pale gums",
+      "species": ["dog", "cow", "buffalo", "other"],
+      "urgency": "today",
+      "do_now": ["Keep the animal in shade with water.", "Check the gums: pale or yellow gums are a warning sign.", "Note if it is weak or not eating."],
+      "dont": ["Don't apply pesticides or chemicals meant for crops.", "Don't crush ticks with bare hands."],
+      "see_vet": "Tick fever can destroy red blood cells. Weakness, fever or pale gums need a vet today.",
+      "sources": ["DAHD"]
+    },
+    "wound_bleeding": {
+      "title": "Wound or bleeding",
+      "species": ["dog", "cat", "cow", "buffalo", "goat", "other"],
+      "urgency": "today",
+      "do_now": ["Keep yourself safe: a hurt animal can bite or kick.", "If it is calm and you are trained, press a clean cloth on a bleeding wound.", "Keep it calm and still."],
+      "dont": ["Don't put turmeric, oil, powders or chemicals on the wound."],
+      "see_vet": "Deep wounds and bleeding that doesn't stop need a vet today.",
+      "sources": ["PFA", "FIAPO"]
+    },
+    "limping": {
+      "title": "Limping or can't stand",
+      "species": ["dog", "cat", "cow", "buffalo", "goat", "other"],
+      "urgency": "today",
+      "do_now": ["Keep the animal still and in shade.", "If it was hit by a vehicle, report it as an SOS so a rescuer comes."],
+      "dont": ["Don't try to straighten or splint the leg.", "Don't make it walk."],
+      "see_vet": "An animal that can't stand or put weight on a leg may have a fracture. A vet should examine it today.",
+      "sources": ["PFA"]
+    },
+    "eye_problem": {
+      "title": "Eye injury or discharge",
+      "species": ["dog", "cat", "cow", "other"],
+      "urgency": "this_week",
+      "do_now": ["Keep the animal out of dust and bright sun.", "Take a clear photo of the eye for the vet."],
+      "dont": ["Don't put human eye drops, oil or kajal in the eye."],
+      "see_vet": "A swollen, cloudy or injured eye should be seen soon; the same day if it was hit.",
+      "sources": ["DAHD"]
+    },
+    "breathing_seizure": {
+      "title": "Trouble breathing, fits or collapse",
+      "species": ["dog", "cat", "cow", "buffalo", "goat", "other"],
+      "urgency": "emergency",
+      "do_now": ["Keep people back and the area quiet.", "Move sharp objects away during a fit; don't hold the animal down.", "Get to a vet now or call 1962."],
+      "dont": ["Don't put your hand in the animal's mouth.", "Don't give water or food during a fit."],
+      "see_vet": "This is an emergency.",
+      "sources": ["PFA"]
+    },
+    "poisoning": {
+      "title": "Ate poison or something harmful",
+      "species": ["dog", "cat", "cow", "buffalo", "goat", "other"],
+      "urgency": "emergency",
+      "do_now": ["Keep the packet or a photo of what it ate.", "Go to a vet now or call 1962."],
+      "dont": ["Don't make the animal vomit unless a vet tells you to.", "Don't give milk, oil or home remedies."],
+      "see_vet": "This is an emergency.",
+      "sources": ["ASPCA"]
+    },
+    "lumpy_skin": {
+      "title": "Lumps on the skin of a cow or buffalo",
+      "species": ["cow", "buffalo"],
+      "urgency": "today",
+      "do_now": ["Keep the animal apart from other cattle.", "Control flies and mosquitoes around it.", "Inform a vet or call 1962: it may be lumpy skin disease."],
+      "dont": ["Don't share water troughs or feed with other cattle.", "Don't apply chemicals to the lumps."],
+      "see_vet": "Lumpy skin disease spreads through insects. A vet should confirm it; vaccination protects other cattle nearby.",
+      "sources": ["DTE", "DAHD"]
+    },
+    "bloat": {
+      "title": "Swollen left belly in a cow (bloat)",
+      "species": ["cow", "buffalo", "goat"],
+      "urgency": "emergency",
+      "do_now": ["Keep the animal standing and walking slowly if it can.", "Call a vet or 1962 now."],
+      "dont": ["Don't let it keep eating.", "Don't pierce the belly yourself."],
+      "see_vet": "Bloat can kill within hours. This is an emergency.",
+      "sources": ["DAHD"]
+    },
+    "plastic_eating": {
+      "title": "Cow eating plastic or garbage",
+      "species": ["cow", "buffalo", "goat"],
+      "urgency": "this_week",
+      "do_now": ["Note if it is eating less, losing weight or not chewing the cud.", "Keep plastic and garbage away from where it feeds."],
+      "dont": ["Don't feed it food wrapped in plastic bags."],
+      "see_vet": "Plastic builds up in the stomach over months. A vet can check a cow that is eating less or losing weight.",
+      "sources": ["DAHD"]
+    },
+    "bite_rabies_risk": {
+      "title": "Animal that bit someone, or acting strangely",
+      "species": ["dog", "cat", "cow", "other"],
+      "urgency": "today",
+      "do_now": ["Keep a safe distance; don't try to catch it.", "Anyone bitten or scratched: wash the wound with soap and running water for 15 minutes and get a rabies vaccine today."],
+      "dont": ["Don't touch its saliva.", "Don't harm the animal; inform the municipal animal team or a vet."],
+      "see_vet": "Rabies is almost always fatal once symptoms start, and fully preventable with prompt vaccination.",
+      "sources": ["WHO"]
+    },
+    "general": {
+      "title": "General care while you wait for the vet",
+      "species": ["dog", "cat", "cow", "buffalo", "goat", "other"],
+      "urgency": "watch",
+      "do_now": ["Keep the animal in shade with clean water.", "Take clear photos and note when it started."],
+      "dont": ["Don't give human medicines.", "Don't apply home remedies to wounds."],
+      "see_vet": "A vet can tell you what this is. If it gets worse, call 1962.",
+      "sources": ["DAHD"]
+    }
+  },
+  "red_flags": {
+    "emergency": ["seizure", "fits", "not breathing", "can't breathe", "collapsed", "unconscious", "poison", "bloat", "swollen belly",
+                  "दौरा", "सांस नहीं", "बेहोश", "ज़हर", "जहर", "पेट फूल", "খিঁচুনি", "শ্বাস নিতে পারছে না", "বিষ", "வலிப்பு", "மூச்சு விட முடியவில்லை", "விஷம்",
+                  "మూర్ఛ", "శ్వాస తీసుకోలేక", "విషం", "behosh", "zehar", "jahar", "saans nahi", "pet phool", "daura"],
+    "today": ["blood", "maggot", "keede", "keeda", "kida", "hit by", "fracture", "can't stand", "not drinking", "pale gums",
+              "खून", "कीड़", "टूट", "पानी नहीं", "রক্ত", "পোকা", "இரத்தம்", "புழு", "రక్తం", "పురుగు", "khoon", "paani nahi"]
+  }
+}

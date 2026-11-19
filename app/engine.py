@@ -20,7 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
-from . import ai, config, photos, rules
+from . import ai, config, photos, rules, vet, words
 from .db import (Animal, Case, CaseEvent, CheckIn, LostPost, Sighting, Trace, TranslationCache, User, get_or_create_user, km,
                  nearby, now)
 
@@ -82,12 +82,13 @@ def step(s: Session, user_id: str, title: str, detail: str):
 AUTO_MATCH = 0.95
 ASK_MATCH = 0.6
 
-MENU_BUTTONS = [("m:sos", "Hurt animal: SOS"), ("m:animals", "My animals"), ("m:lost", "Lost & found")]
+MENU_BUTTONS = [("m:sos", "🚨 Hurt animal: SOS"), ("m:vet", "🩺 Talk to a vet"), ("m:lost", "🔎 Lost & found"),
+                ("m:animals", "💛 My animals")]
 
 
 def menu(u: User, intro: str | None = None) -> Out:
     return Out(u.id, intro or "What would you like to do?\n\nIn a hurry? Just send a photo, I'll figure it out.",
-               buttons=MENU_BUTTONS)
+               options=MENU_BUTTONS)
 
 
 def language_picker(u: User) -> Out:
@@ -147,11 +148,29 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
     if not u.lang:
         u.state = {"pending": {"text": text, "photo": photo_id}} if (text or photo_id) else {}
         return [language_picker(u)]
-    if re.fullmatch(r"(?i)\s*(language|bhasha|भाषा)\s*", text):
+    if words.is_language(text):
         return [language_picker(u)]
 
+    # 1b. A live vet consult: everything typed or sent goes to the other side (until someone ends it).
+    if st.get("flow") == "consult" and not b:
+        c = vet.active_consult(s, u.id, (st.get("d") or {}).get("consult"))
+        if c and text.lower() in ("end", "stop", "बंद", "खत्म"):
+            if c.user_id == u.id:
+                return vet.end_by_owner(s, u, c.id)
+            return vet.button(s, u, f"v:note:{c.id}")
+        if c and (text or photo_id):
+            return vet.relay(s, u, c, text, photo_id)
+        if not c:
+            u.state = st = {}
+    if st.get("flow") == "vet_note" and text and not b:
+        return vet.save_note(s, u, inc.text or "")
+    if text and not b:
+        r = vet.vet_command(s, u, text)
+        if r is not None:
+            return r
+
     # 2. Global commands and buttons.
-    if b == "menu" or re.fullmatch(r"(?i)\s*(hi+|hello|hey|namaste|namaskar|start|menu|cancel|stop)\s*[.!]*", text):
+    if b == "menu" or words.is_menu(text) or re.fullmatch(r"(?i)\s*hi+\s*[.!]*", text):
         u.state = {}
         return [menu(u)]
     m = re.fullmatch(r"(?i)\s*seen\s+(LF-?\d+)\s*", text)
@@ -162,7 +181,7 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
         name = post.name if post else "the animal"
         return [Out(u.id, f"Thank you for helping {name} get home! 🙏\nPlease send a photo of the animal you saw, "
                           "and share the location where you saw it.", ask_location=True)]
-    if re.fullmatch(r"(?i)\s*(volunteer|helper|join)\s*", text) or b == "vol:yes":
+    if words.is_volunteer(text) or b == "vol:yes":
         return volunteer_join(s, u)
     if b == "loc:denied":  # the phone refused GPS: never guess a location, ask for a landmark instead
         return [Out(u.id, "I couldn't get your location. 📍\nPlease turn on Location for this site (tap the 🔒 or ⓘ "
@@ -173,6 +192,12 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
         return case_button(s, u, b)
     if b.startswith("lm:"):
         return lost_match_button(s, u, b)
+    if b.startswith(("v:who:", "v:sp:")):
+        return vet.flow_step(s, u, text, photo_id, b)
+    if b.startswith("v:"):
+        return vet.button(s, u, b)
+    if b == "m:vet":
+        return vet.start(s, u)
 
     flow = st.get("flow")
     if b == "m:sos":
@@ -211,7 +236,7 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
     if flow and text and not photo_id and not b:
         expects_text = (flow == "sos" or (flow in ("register", "lost") and st.get("d", {}).get("photo")
                                           and (not st["d"].get("name") or (flow == "lost" and not st["d"].get("when")))))
-        urgent = flow != "sos" and re.search(INJURY_WORDS, text.lower())
+        urgent = flow != "sos" and words.says_hurt(text)
         if urgent or not expects_text:
             it = ai.intent(s, u.id, text)
             target = {"sos": "m:sos", "lost": "l:lost", "register": "a:register", "checkin": "a:checkin",
@@ -237,6 +262,10 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
         return seen_step(s, u, text, photo_id, b)
     if flow == "photo_choice":
         return photo_choice(s, u, b)
+    if flow == "vet":
+        return vet.flow_step(s, u, text, photo_id, b)
+    if flow == "vet_food" and text:
+        return vet.food_answer(s, u, text)
     if flow == "proof":
         return proof_step(s, u, photo_id, b)
 
@@ -246,6 +275,9 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
     if inc.lat is not None:
         u.lat, u.lon = inc.lat, inc.lon
         return [menu(u, "Thanks, I've saved this as your usual place. 📍")]
+    if text and words.wants_vet(text):
+        step(s, u.id, "Decided what you need", "asked for a vet (keyword)")
+        return vet.start(s, u)
     if text:
         it = ai.intent(s, u.id, text)
         step(s, u.id, "Decided what you need", f"intent = {it['intent']} (via {it['via']})")
@@ -355,7 +387,7 @@ def sos_step(s, u: User, text: str, photo_id: str | None, b: str) -> list[Out]:
         u.state = {"flow": "sos", "d": d}
         return [Out(u.id, "Okay. Please type another landmark with the area name, or share your location 📍.",
                     ask_location=True)]
-    elif text and d.get("asked_loc") and d.get("lat") is None and not re.search(INJURY_WORDS, text.lower()):
+    elif text and d.get("asked_loc") and d.get("lat") is None and not words.says_hurt(text):
         # They were asked where it is, and typed a place: look it up, and confirm before using it.
         from . import geo
         hit = geo.geocode(text, (u.lat, u.lon) if u.lat else None)
@@ -419,8 +451,14 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
     lat, lon = d["lat"], d["lon"]
     img = photos.data_url(s, d.get("photo"))
     desc = d.get("desc") or ai.describe(s, u.id, img, d.get("text", ""))
-    said_hurt = bool(re.search(INJURY_WORDS, (d.get("text") or "").lower())) or d.get("hurt_answer") == "hurt"
+    said_hurt = words.says_hurt(d.get("text") or "") or d.get("hurt_answer") == "hurt"
     desc = apply_reporter_words(s, u.id, desc, d.get("text", ""))
+    if not img and d.get("text"):
+        # Text-only report (e.g. at night): a plain summary in the reporter's own words, never "unverified".
+        what = {"injured": "reported hurt", "dead": "reported dead", "trapped": "reported trapped",
+                "sick": "reported sick"}.get(desc.get("condition"), "reported")
+        sp = desc["species"] if desc["species"] != "other" else "animal"
+        desc = {**desc, "summary": f"{sp.title()} {what} by the person on the spot: “{d['text'].strip()[:120]}”"}
     if d.get("hurt_answer") == "hurt" and desc.get("condition") in ("healthy", "unknown"):
         desc = {**desc, "condition": "injured"}
         step(s, u.id, "Trusted the reporter", "They said the animal needs help.")
@@ -541,11 +579,7 @@ def create_case(s, u: User, d: dict, source: str = "citizen") -> list[Out]:
     return outs + alerts
 
 
-INJURY_WORDS = (r"(bleed|blood|khoon|injur|hurt|ghayal|chot|zakhm|wound|fracture|limp|langd|broken|toot|can'?t walk|"
-                r"cannot walk|chal nahi|uth nahi|not moving|hil nahi|hilta nahi|behosh|unconscious|accident|hit by|"
-                r"takkar|gaadi ne|kuchal|maar|trapped|stuck|phans|fasa|dying|dead|mar gay|mara hua|sick|bimar|beemar|"
-                r"not eating|kha nahi|ulti|vomit|maggot|keede|keeda|fell down|gir gay|gira|pada hai|padi hai)")
-ROAD_WORDS = r"(road|sadak|highway|accident|hit by|takkar|gaadi|vehicle|truck|bike|car)"
+# Words people type, in all 6 languages, live in app/words.py.
 
 
 def apply_reporter_words(s, uid, desc: dict, text: str) -> dict:
@@ -555,9 +589,9 @@ def apply_reporter_words(s, uid, desc: dict, text: str) -> dict:
     if not t:
         return desc
     d = dict(desc)
-    hurt = re.search(INJURY_WORDS, t)
-    road = re.search(ROAD_WORDS, t)
-    if re.search(r"(dead|mar gay|mara hua|died|lash)", t) and d["condition"] in ("healthy", "unknown", "injured"):
+    hurt = words.says_hurt(t)
+    road = words.says_road(t)
+    if words.says_dead(t) and d["condition"] in ("healthy", "unknown", "injured"):
         d["condition"] = "dead"
         d["first_aid_card"] = "dead_animal"
         step(s, uid, "Trusted the reporter", "They said the animal is dead.")
@@ -568,7 +602,10 @@ def apply_reporter_words(s, uid, desc: dict, text: str) -> dict:
         if d["condition"] in ("healthy", "unknown"):
             d["condition"] = "injured"
         d["urgency"] = "high"
-        d["first_aid_card"] = "road_injury" if road else ("trapped" if re.search(r"(trapped|stuck|phans|fasa)", t) else "bleeding")
+        trapped = words.says_trapped(t)
+        if trapped:
+            d["condition"] = "trapped"
+        d["first_aid_card"] = "road_injury" if road else ("trapped" if trapped else "bleeding")
         if "no visible injur" in d["summary"].lower() or "despite" in d["summary"].lower():
             d["summary"] = (f"{d['species'].title()} reported injured by the person on the spot "
                             f"({text.strip()[:80]}). Injury not clearly visible in the photo.")
@@ -674,8 +711,9 @@ def alert_next(s, case: Case) -> list[Out]:
 
 
 def escalate_due(s) -> list[Out]:
-    """The Watch agent, every ~20 s: anyone who didn't answer in their time is skipped."""
-    outs = []
+    """The Watch agent, every ~20 s: anyone who didn't answer in their time is skipped; vet requests move on;
+    follow-ups go out."""
+    outs = vet.due(s)
     for c in s.scalars(select(Case).where(Case.status == "alerting", Case.alerted_at.is_not(None))):
         if c.alerted_at > now() - timedelta(seconds=hop_seconds(c)):
             continue
@@ -707,7 +745,8 @@ def case_button(s, u: User, b: str) -> list[Out]:
         return [
             Out(u.id, f"Thank you! 🙏 The person who found it is waiting nearby.\nCase SW-{c.id}",
                 link=maps_link(c.lat, c.lon), buttons=[(f"case:safe:{c.id}", "It's safe now"),
-                                                      (f"case:more:{c.id}", "Need more help")]),
+                                                      (f"case:more:{c.id}", "Need more help"),
+                                                      (f"v:case:{c.id}", "🩺 Ask a vet")]),
             Out(u.id, first_aid_text((c.triage or {}).get("first_aid_card", "general"), include_bite_rule=False)),
             Out(c.reporter_id, f"✅ {who} is on the way! (case SW-{c.id})\nPlease stay at a safe distance until they arrive."),
         ]
@@ -1232,7 +1271,7 @@ def handle_misc(s, u: User, inc: Incoming) -> list[Out] | None:
     b, text = inc.button or "", (inc.text or "").strip().lower()
     if b.startswith("vax:") and st == "vax":
         return vax_answer(s, u, b)
-    if st == "vax_reply" and text in ("vaccinated", "done", "yes", "haan", "ho gaya"):
+    if st == "vax_reply" and words.is_yes_done(text):
         a = s.get(Animal, u.state["d"]["animal"])
         u.state = {}
         if a:
@@ -1249,10 +1288,10 @@ def handle_misc(s, u: User, inc: Incoming) -> list[Out] | None:
                               "share your location 📍.", ask_location=True)]
         u.lat, u.lon, u.state = hit["lat"], hit["lon"], {}
         return [Out(u.id, f"📍 Saved your area as *{hit['label']}*.")] + volunteer_join(s, u)
-    if text == "pause":
+    if words.is_pause(text):
         u.state = {**(u.state or {}), "paused": True}
         return [Out(u.id, "Alerts paused. Type *resume* to turn them back on.")]
-    if text == "resume":
+    if words.is_resume(text):
         st2 = dict(u.state or {})
         st2.pop("paused", None)
         u.state = st2
@@ -1279,6 +1318,30 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:  # noqa: F811
 
 
 # ------------------------------------------------------------------ translation at the edge
+
+TRANSLATIONS_FILE = DATA / "translations.json"
+
+
+def seed_translations(s: Session) -> int:
+    """Load the reviewed, pre-made translations of StrayWatch's fixed messages into the cache, so menus, prompts
+    and first-aid cards work in every language even when the AI is slow or down. Returns rows added."""
+    import hashlib
+    if not TRANSLATIONS_FILE.exists():
+        return 0
+    data = json.loads(TRANSLATIONS_FILE.read_text(encoding="utf-8"))
+    added = 0
+    for lang, pairs in data.get("languages", {}).items():
+        for src, tr in pairs.items():
+            key = hashlib.sha256(f"{lang}|{src}".encode()).hexdigest()[:64]
+            row = s.get(TranslationCache, key)
+            if row is None:
+                s.add(TranslationCache(key=key, text=tr))
+                added += 1
+            elif row.text != tr:
+                row.text = tr  # the reviewed file wins over an older machine translation
+    s.commit()
+    return added
+
 
 def translate_texts(s: Session, texts: list[str], lang: str) -> dict[str, str]:
     """Translate many strings into one language, using the shared cache; one AI call per 12 new strings."""
@@ -1342,6 +1405,6 @@ def localise(s: Session, outs: list[Out]) -> list[Out]:
         if o.raw or lang == "en":
             continue
         o.text = done.get((lang, o.text), o.text)
-        o.buttons = [(i, done.get((lang, t), t)[:20]) for i, t in o.buttons]
-        o.options = [(i, done.get((lang, t), t)[:24]) for i, t in o.options]
+        o.buttons = [(i, done.get((lang, t), t)) for i, t in o.buttons]  # WhatsApp trims to its own limits
+        o.options = [(i, done.get((lang, t), t)) for i, t in o.options]
     return outs

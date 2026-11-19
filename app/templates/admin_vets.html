@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Verify vets · StrayWatch{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<div class="page-head"><div class="hand">admin</div><h1>Verify vets</h1>
+<p>Check each registration with the state veterinary council (or the VCI register) before verifying. Only verified vets are listed and get consults.</p></div>
+<div class="tablebox card" style="padding:0"><table class="cmp">
+  <thead><tr><th>Vet</th><th>Registration</th><th>Contact</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+  {% for v in vets %}
+  <tr><td><b>{{ v.name }}</b><br><span class="note">{{ v.clinic or '' }} · {{ v.qualification or '' }} · {{ v.code }}{% if v.user_id %} · app linked{% endif %}</span></td>
+      <td>{{ v.reg_no }}<br><span class="note">{{ v.council }}</span></td><td>{{ v.contact }}</td>
+      <td><span class="pill {{ 'LOW' if v.verified else 'CHECK' }}">{{ 'Verified' if v.verified else 'Pending' }}</span></td>
+      <td><form method="post" action="/admin/vets/{{ v.id }}/verify"><input type="hidden" name="key" value="{{ key }}"><input type="hidden" name="on" value="{{ 'no' if v.verified else 'yes' }}"><button class="btn small {{ '' if v.verified else 'mint' }}">{{ 'Remove' if v.verified else 'Verify' }}</button></form></td></tr>
+  {% else %}<tr><td colspan="5">No vets have signed up yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+{% endblock %}

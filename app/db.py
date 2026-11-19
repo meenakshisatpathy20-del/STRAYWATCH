@@ -182,6 +182,67 @@ class PartnerLead(Base):
     created: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 
+class VetProfile(Base):
+    """A veterinarian who gives online consults. Listed only when `verified` (registration checked by a person)."""
+    __tablename__ = "vet_profiles"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str | None] = mapped_column(String(80), index=True)  # linked chat user (set when they link)
+    code: Mapped[str] = mapped_column(String(12), unique=True)           # e.g. VET-4821, used to link the chat
+    name: Mapped[str] = mapped_column(String(80))
+    clinic: Mapped[str | None] = mapped_column(String(120))
+    qualification: Mapped[str | None] = mapped_column(String(80))       # e.g. B.V.Sc. & A.H.
+    council: Mapped[str | None] = mapped_column(String(80))             # e.g. Jharkhand State Veterinary Council
+    reg_no: Mapped[str | None] = mapped_column(String(40))
+    contact: Mapped[str | None] = mapped_column(String(120))            # private, for verification only
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    online: Mapped[bool] = mapped_column(Boolean, default=False)
+    langs: Mapped[list] = mapped_column(JSON, default=list)
+    species: Mapped[list] = mapped_column(JSON, default=list)
+    fee: Mapped[int] = mapped_column(Integer, default=0)                # ₹ for pets; 0 = free
+    free_for_strays: Mapped[bool] = mapped_column(Boolean, default=True)
+    sample: Mapped[bool] = mapped_column(Boolean, default=False)
+    lat: Mapped[float | None] = mapped_column(Float)
+    lon: Mapped[float | None] = mapped_column(Float)
+    created: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
+class Consult(Base):
+    """An online vet consultation: AI pre-check, then a live chat with a verified vet, then the vet's note."""
+    __tablename__ = "consults"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(80), index=True)
+    vet_id: Mapped[int | None] = mapped_column(Integer)               # VetProfile.id
+    asked: Mapped[list] = mapped_column(JSON, default=list)           # VetProfile ids already asked
+    who: Mapped[str] = mapped_column(String(10), default="pet")       # pet | stray | case
+    species: Mapped[str | None] = mapped_column(String(20))
+    animal_id: Mapped[int | None] = mapped_column(Integer)
+    case_id: Mapped[int | None] = mapped_column(Integer)
+    photo_id: Mapped[str | None] = mapped_column(String(24))
+    text: Mapped[str | None] = mapped_column(Text)
+    summary: Mapped[dict] = mapped_column(JSON, default=dict)          # AI pre-check (validated)
+    urgency: Mapped[str | None] = mapped_column(String(12))
+    card: Mapped[str | None] = mapped_column(String(30))
+    status: Mapped[str] = mapped_column(String(12), default="intake")  # intake|waiting|requested|active|closed|cancelled
+    requested_at: Mapped[datetime | None] = mapped_column(DateTime)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    note: Mapped[str | None] = mapped_column(Text)                    # the vet's advice
+    video_room: Mapped[str | None] = mapped_column(String(120))
+    followup_at: Mapped[datetime | None] = mapped_column(DateTime)
+    followed_up: Mapped[bool] = mapped_column(Boolean, default=False)
+    created: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
+class ConsultMessage(Base):
+    __tablename__ = "consult_messages"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    consult_id: Mapped[int] = mapped_column(Integer, index=True)
+    sender_id: Mapped[str] = mapped_column(String(80))
+    text: Mapped[str | None] = mapped_column(Text)
+    photo_id: Mapped[str | None] = mapped_column(String(24))
+    created: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
 class PushSub(Base):
     """A phone/browser that asked for notifications (Web Push). Alerts reach it even when the app is closed."""
     __tablename__ = "push_subs"

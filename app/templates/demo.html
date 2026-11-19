@@ -19,7 +19,8 @@
   <button class="btn sun small" data-sample="lying">🛣️ Dog lying on the road</button>
   <button class="btn small" data-sample="cow">🐄 Healthy cows on a road (no case)</button>
   <button class="btn sky small" data-sample="lost">🔎 My cow is lost</button>
-  <button class="btn mint small" data-sample="register">💛 Register a street dog</button>
+  <button class="btn mint small" data-sample="vet">🩺 Sick puppy: talk to a vet</button>
+  <button class="btn small" data-sample="register">💛 Register a street dog</button>
   <button class="btn small" data-sample="checkin">📸 Daily check-in</button>
   <button class="btn small" data-sample="reset">↺ Start over</button>
 </div>
@@ -54,12 +55,15 @@
         <button aria-pressed="false" data-as="demo:ngo">NGO</button>
         <button aria-pressed="false" data-as="demo:arjun">Volunteer</button>
         <button aria-pressed="false" data-as="demo:coord">Coordinator</button>
+        <button aria-pressed="false" data-as="demo:vet2">🩺 Vet</button>
       </div>
       <div class="msgs" id="helper"><div class="typing">Alerts for this responder will appear here…</div></div>
-      <div class="composer" style="justify-content:space-between">
-        <span class="note" style="margin:0">Closing a case needs a photo →</span>
-        <label class="btn small mint" style="cursor:pointer">📷 Proof photo<input type="file" id="helperFile" accept="image/*" hidden></label>
-      </div>
+      <form class="composer" id="helperComposer">
+        <label class="icon-btn" title="Send a photo (e.g. proof that the animal is safe)"><span class="sr">Send a photo</span>📷<input type="file" id="helperFile" accept="image/*" hidden></label>
+        <label for="helperText" class="sr">Message as this responder</label>
+        <input type="text" id="helperText" placeholder="Reply as this responder…" autocomplete="off">
+        <button class="icon-btn" aria-label="Send" style="background:var(--sun)">➤</button>
+      </form>
     </div>
   </figure>
 
@@ -70,6 +74,6 @@
   </div>
 </div>
 
-<div class="note">Priya, the cattle team, the NGO, Arjun and the coordinator are <b>sample responders</b> so you can play both sides. Real responders get these alerts in the app, or on WhatsApp. Photos: “A pack of Indogs” (Achat1999, CC BY-SA 4.0); cows from “Stray Cattle in Lutyens Delhi” (Fowler&amp;fowler, CC BY-SA 3.0).</div>
+<div class="note">Priya, the cattle team, the NGO, Arjun, the coordinator and the vet are <b>samples</b> so you can play both sides. Real responders get these alerts in the app, or on WhatsApp. Photos: “A pack of Indogs” (Achat1999, CC BY-SA 4.0); “Indian pariah dog puppy litter” (Wasir kasab, CC BY 4.0); cows from “Stray Cattle in Lutyens Delhi” (Fowler&amp;fowler, CC BY-SA 3.0).</div>
 {% endblock %}
 {% block scripts %}<script src="/static/app.js"></script>{% endblock %}

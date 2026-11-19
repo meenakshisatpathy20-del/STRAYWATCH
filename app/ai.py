@@ -283,6 +283,52 @@ def proof_check(s, user_id, report_image: str | None, proof_image: str, species:
     return {"ok": ok, "checked": True, "same_animal": same, "note": str(d.get("note") or "")[:200]}
 
 
+VET_CARD_IDS = ["maggot_wound", "vomiting_diarrhoea", "not_eating", "skin_itching", "ticks_fever", "wound_bleeding",
+                "limping", "eye_problem", "breathing_seizure", "poisoning", "lumpy_skin", "bloat", "plastic_eating",
+                "bite_rabies_risk", "general"]
+VET_URGENCY = ["emergency", "today", "this_week", "watch"]
+
+VET_INSTRUCTIONS = """You help StrayWatch prepare an ONLINE VET CONSULTATION in India. You are NOT the vet.
+Read the person's message (any Indian language or Hinglish) and the photo if there is one. Organise what they say for
+the vet. Never diagnose, never name a medicine or dose. Pick the ONE care card that best fits and an urgency:
+emergency = trouble breathing, fits, collapse, poisoning, bloat, heavy bleeding, hit by a vehicle and can't stand;
+today = maggots, wound, bleeding, not drinking, blood in motions, puppy vomiting, limping badly, pale gums, lumps on cattle;
+this_week = itching/hair loss, mild eye issue, eating less, plastic eating; watch = minor, improving.
+Reply with ONE JSON object only:
+{"species": "dog|cat|cow|buffalo|goat|other", "age_guess": "puppy/kitten/calf|young|adult|old|unknown",
+ "problem": "the main problem in a few words", "symptoms": ["..."], "since": "how long, or 'not said'",
+ "eating_drinking": "what they said, or 'not said'",
+ "card": "maggot_wound|vomiting_diarrhoea|not_eating|skin_itching|ticks_fever|wound_bleeding|limping|eye_problem|breathing_seizure|poisoning|lumpy_skin|bloat|plastic_eating|bite_rabies_risk|general",
+ "urgency": "emergency|today|this_week|watch",
+ "summary_for_vet": "2-3 plain sentences: what the owner reports and what the photo shows",
+ "ask": ["at most 2 short questions the vet will want answered"]}"""
+
+
+def vet_intake(s, user_id, image: str | None, message: str, species_hint: str = "") -> dict:
+    """Organise a consult request for the vet. Always returns a valid dict (safe defaults if the AI fails)."""
+    text = f"Species (from the person): {species_hint or 'not said'}\nPerson's message: {message.strip() or '(none)'}"
+    try:
+        d = parse_json(call(s, user_id, "Prepared the vet summary", config.VISION_MODEL, VET_INSTRUCTIONS, text,
+                            [image] if image else None, max_tokens=500))
+    except AIError:
+        d = {}
+    ask = d.get("ask") if isinstance(d.get("ask"), list) else []
+    sym = d.get("symptoms") if isinstance(d.get("symptoms"), list) else []
+    return {
+        "species": _enum(d.get("species") or species_hint, SPECIES, "other"),
+        "age_guess": str(d.get("age_guess") or "unknown")[:30],
+        "problem": str(d.get("problem") or message[:80] or "not clear")[:120],
+        "symptoms": [str(x)[:60] for x in sym[:6]],
+        "since": str(d.get("since") or "not said")[:60],
+        "eating_drinking": str(d.get("eating_drinking") or "not said")[:80],
+        "card": _enum(d.get("card"), set(VET_CARD_IDS), "general"),
+        "urgency": _enum(d.get("urgency"), set(VET_URGENCY), "today"),
+        "summary_for_vet": str(d.get("summary_for_vet") or message[:300])[:500],
+        "ask": [str(x)[:120] for x in ask[:2]],
+        "ai_ok": bool(d),
+    }
+
+
 # ---------------------------------------------------------------- understanding free text
 
 INTENT_INSTRUCTIONS = """Classify a message sent to StrayWatch (Indian street-animal care bot). Messages may be in
@@ -303,9 +349,14 @@ _KEYWORDS = [
 
 
 def intent(s, user_id, text: str) -> dict:
+    from . import words
     low = text.lower()
     for name, pat in _KEYWORDS:
         if re.search(pat, low):
+            return {"intent": name, "name": None, "via": "keyword"}
+    for name, ok in (("sos", words.says_hurt), ("lost", words.says_lost), ("menu", words.is_menu),
+                     ("language", words.is_language)):
+        if ok(text):
             return {"intent": name, "name": None, "via": "keyword"}
     try:
         d = parse_json(call(s, user_id, "Understood the message", config.FAST_MODEL, INTENT_INSTRUCTIONS, text,
@@ -346,7 +397,7 @@ def translate(s, text: str, lang: str | None, user_id: str | None = None) -> str
             return hit.text
     try:
         out = call(None, None, "Translated", config.TEXT_MODEL,
-                   TRANSLATE_INSTRUCTIONS.format(lang=LANGS[lang][0]), text, max_tokens=900)
+                   TRANSLATE_INSTRUCTIONS.format(lang=LANGS[lang][0]), text, max_tokens=min(6000, 600 + 3 * len(text)))
     except AIError:
         return text
     out = out.strip().strip('"')
@@ -369,9 +420,15 @@ def translate_batch(texts: list[str], lang: str) -> list[str]:
     """Translate many strings in ONE call (the API is rate limited). Falls back to English per item."""
     if not texts or lang == "en" or lang not in LANGS:
         return list(texts)
+    # Big batches come back cut off (Indian scripts use many tokens): split them, keeping order.
+    if len(texts) > 1 and sum(len(t) for t in texts) > 1400:
+        mid = len(texts) // 2
+        return translate_batch(texts[:mid], lang) + translate_batch(texts[mid:], lang)
     try:
         raw = call(None, None, "Translated", config.TEXT_MODEL, BATCH_INSTRUCTIONS.format(lang=LANGS[lang][0]),
-                   json.dumps(texts, ensure_ascii=False), max_tokens=400 + 120 * len(texts))
+                   json.dumps(texts, ensure_ascii=False),
+                   # Indian scripts take several tokens per word: budget by length so long cards aren't cut off
+                   max_tokens=min(8000, 400 + 120 * len(texts) + 3 * sum(len(t) for t in texts)))
         out = parse_json(raw).get("t")
         if isinstance(out, list) and len(out) == len(texts):
             return [str(o).strip() or t for o, t in zip(out, texts)]

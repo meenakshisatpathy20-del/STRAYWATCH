@@ -1,6 +1,7 @@
 // StrayWatch browser chat: same engine as WhatsApp.
 (function () {
   const $ = (s) => document.querySelector(s);
+  const T = (k, en) => (window.swT ? window.swT(k) : en);
   const msgs = $("#msgs"), helper = $("#helper"), traceEl = $("#trace");
   const APP = document.body.dataset.mode === "app";  // the installable app screen (/app): real use, no demo panels
   const DEMO_SPOT = { lat: 23.3725, lon: 85.3330, label: "Lalpur, Ranchi" };
@@ -29,12 +30,14 @@
     const row = b.querySelector(".btns");
     btns.forEach((x) => {
       const el = document.createElement("button");
-      el.type = "button"; el.textContent = x.title;
-      el.onclick = () => { row.querySelectorAll("button").forEach((y) => (y.disabled = true)); send({ button: x.id, echo: x.title, asUser }); };
+      el.type = "button"; el.textContent = x.title; el.dataset.id = x.id;
+      // Choices lock after one tap; ongoing actions (video, end chat) stay usable.
+      const persistent = /^v:(video|end|note):/.test(x.id);
+      el.onclick = () => { if (!persistent) row.querySelectorAll("button").forEach((y) => (y.disabled = true)); else el.disabled = true; send({ button: x.id, echo: x.title, asUser }); };
       row.appendChild(el);
     });
     if (m.ask_location && !asUser) {
-      (APP ? [["📍 Share my location", "real"]] : [["📍 My location", "real"], ["📍 Demo spot: Lalpur", "demo"]]).forEach(([t, k]) => {
+      (APP ? [[T("share_loc", "📍 Share my location"), "real"]] : [["📍 My location", "real"], ["📍 Demo spot: Lalpur", "demo"]]).forEach(([t, k]) => {
         const el = document.createElement("button"); el.type = "button"; el.textContent = t;
         el.onclick = () => shareLocation(k);
         row.appendChild(el);
@@ -46,7 +49,7 @@
 
   function typing(on) {
     let t = msgs.querySelector(".typing");
-    if (on && !t) { t = document.createElement("div"); t.className = "typing"; t.textContent = "StrayWatch is looking…"; msgs.appendChild(t); msgs.scrollTop = msgs.scrollHeight; }
+    if (on && !t) { t = document.createElement("div"); t.className = "typing"; t.textContent = T("typing", "StrayWatch is looking…"); msgs.appendChild(t); msgs.scrollTop = msgs.scrollHeight; }
     if (!on && t) t.remove();
   }
 
@@ -98,7 +101,7 @@
     if (asUser) return sendAs(asUser, button, echo, file);
     while (busy) await new Promise((r) => setTimeout(r, 150));  // wait our turn; never drop what the person sent
     busy = true;
-    if (button.startsWith("lang:")) { try { localStorage.setItem("sw_lang_code", button.slice(5)); } catch (e) {} }
+    if (button.startsWith("lang:")) { try { localStorage.setItem("sw_lang_code", button.slice(5)); } catch (e) {} window.dispatchEvent(new Event("sw-lang")); }
     if (echo || text || file || lat) bubble(msgs, { text: echo || text || (lat ? "📍 Location shared" : ""), previewSrc }, true);
     if (file) file = await shrink(file);
     const item = { text, button, lat, lon, photo: file };
@@ -114,20 +117,20 @@
         const q = qload();
         q.push({ ...item, photo: file ? await toDataURL(file) : null });
         if (qsave(q)) bubble(msgs, { text: offlineMsg(0) }, false);
-        else bubble(msgs, { text: "Network problem, and your phone's storage is full. Please try again, or call 1962. 🙏" }, false);
-      } else bubble(msgs, { text: "Network hiccup. Please try again. 🙏" }, false);
+        else bubble(msgs, { text: T("storage_full", "Network problem, and your phone's storage is full. Please try again, or call 1962. 🙏") }, false);
+      } else bubble(msgs, { text: T("network_err", "Network problem. Please try again. 🙏") }, false);
     }
     busy = false;
     pollTrace();
     if (navigator.onLine && qload().length) setTimeout(flushQueue, 500);
   }
 
-  async function sendAs(asUser, button, echo, file = null) {
+  async function sendAs(asUser, button, echo, file = null, text = "") {
     const box = helper;
-    const mine = file ? { text: echo, previewSrc: URL.createObjectURL(file) } : { text: echo };
+    const mine = file ? { text: echo, previewSrc: URL.createObjectURL(file) } : { text: echo || text };
     helperLog[asUser].push({ mine: true, m: mine });
     if (asUser === helperAs) bubble(box, mine, true);
-    const fd = new FormData(); fd.append("button", button || ""); fd.append("as_user", asUser);
+    const fd = new FormData(); fd.append("button", button || ""); fd.append("as_user", asUser); fd.append("text", text || "");
     if (file) fd.append("photo", file);
     const r = await fetch("/api/chat", { method: "POST", body: fd });
     const j = await r.json();
@@ -217,6 +220,23 @@
           () => send({ file: f, echo: "📷 Cows walking on the road", previewSrc: URL.createObjectURL(f) }),
           () => send({ lat: RATU_RD.lat - 0.004, lon: RATU_RD.lon + 0.003, echo: "📍 Near Ratu Road" }),
         ]);
+      } else if (k === "vet") {
+        const f = await sampleFile("sick_puppy.jpg");
+        const tap = async (prefix) => {  // the first matching button in the newest message
+          await wait();
+          const last = [...msgs.querySelectorAll("button[data-id]")].reverse().find((x) => x.dataset.id.startsWith(prefix) && !x.disabled);
+          const b = last && [...last.parentElement.querySelectorAll("button[data-id]")].find((x) => x.dataset.id.startsWith(prefix));
+          if (b) b.click();
+        };
+        await run([
+          () => send({ button: "m:vet", echo: "🩺 Talk to a vet" }),
+          () => send({ button: "v:who:pet", echo: "🏠 My pet" }),
+          () => send({ button: "v:sp:dog", echo: "🐕 Dog" }),
+          () => send({ file: f, text: "mera puppy 2 din se ulti kar raha hai aur kuch kha nahi raha", echo: "📷 mera puppy 2 din se ulti kar raha hai aur kuch kha nahi raha", previewSrc: URL.createObjectURL(f) }),
+          () => tap("v:connect"),
+          () => tap("v:pick"),
+        ]);
+        const vt = document.querySelector('[data-as="demo:vet2"]'); if (vt) setTimeout(() => vt.click(), 2500);
       } else if (k === "register") {
         const f = await sampleFile("register_dog.jpg");
         await run([
@@ -254,6 +274,11 @@
       helperLog[helperAs].forEach((x) => bubble(helper, x.m, x.mine, helperAs));
     }));
 
+  const hc = document.getElementById("helperComposer");
+  if (hc) hc.addEventListener("submit", (e) => {
+    e.preventDefault(); const i = document.getElementById("helperText"); const t = i.value.trim(); if (!t) return;
+    i.value = ""; sendAs(helperAs, "", "", null, t);
+  });
   const hf = document.getElementById("helperFile");
   if (hf) hf.addEventListener("change", (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -289,8 +314,8 @@
         const li = document.createElement("li");
         let detail = s.detail;
         if (s.model && detail.trim().startsWith("{")) {
-          try { const o = JSON.parse(detail.replace(/```json|```/g, "")); detail = o.summary || o.reason || o.note || (o.intent ? "intent: " + o.intent : JSON.stringify(o).slice(0, 160)); }
-          catch (e) { const m = detail.match(/"(summary|reason|note)"\s*:\s*"([^"]+)/); detail = m ? m[2] : detail.slice(0, 160); }
+          try { const o = JSON.parse(detail.replace(/```json|```/g, "")); detail = o.summary || o.summary_for_vet || o.reason || o.note || o.problem || (o.intent ? "intent: " + o.intent : JSON.stringify(o).slice(0, 160)); }
+          catch (e) { const m = detail.match(/"(summary|summary_for_vet|reason|note|problem)"\s*:\s*"([^"]+)/); detail = m ? m[2] : detail.slice(0, 160); }
         }
         li.innerHTML = `<b>${esc(s.step)}</b>: ${esc(detail)} ${s.model ? `<span class="ms">· ${esc(s.model)} · ${(s.ms / 1000).toFixed(1)} s</span>` : ""}`;
         traceEl.appendChild(li);
@@ -302,10 +327,22 @@
   setInterval(pollTrace, 4000);
 
   // Arrived from a poster's "I've seen her" link?
+  const GO = { vet: { button: "m:vet", echo: "🩺 Talk to a vet" }, food: { button: "v:food", echo: "🥣 Food & care" },
+               sos: { button: "m:sos", echo: "🚨 Hurt animal: SOS" } };
+  const go = new URLSearchParams(location.search).get("go");
+  if (go && GO[go]) { try { sessionStorage.setItem("sw_go", go); } catch (e) {} }
+  async function runGo() {
+    let g = null; try { g = sessionStorage.getItem("sw_go"); sessionStorage.removeItem("sw_go"); } catch (e) {}
+    if (g && GO[g]) await send(GO[g]);
+  }
+  window.addEventListener("sw-lang", () => setTimeout(runGo, 300));
   const seen = new URLSearchParams(location.search).get("seen");
   if (seen) { ensureLang().then(() => send({ text: "SEEN " + seen })); }
   else if (!msgs.children.length) {
-    if (APP) send({ button: "menu" });  // opens with the language picker (first time) or the main menu
+    if (APP) {  // opens with the language picker (first time) or the main menu, then any deep link (?go=vet)
+      let hasLang = false; try { hasLang = !!localStorage.getItem("sw_lang_code"); } catch (e) {}
+      if (hasLang && go && GO[go]) runGo(); else send({ button: "menu" });
+    }
     else bubble(msgs, { text: "Namaste! 🐾 Pick a sample above, or say *hi* to start." }, false);
   }
 })();

@@ -50,3 +50,6 @@ CITY_CENTER = (float(os.environ.get("SW_CITY_LAT", "23.3441")), float(os.environ
 
 # Abuse limits for reporters
 MAX_SOS_PER_HOUR = int(os.environ.get("SW_MAX_SOS_PER_HOUR", "5"))
+
+# Admin pages (verifying vets). Empty = admin pages are switched off.
+ADMIN_KEY = os.environ.get("SW_ADMIN_KEY", "")

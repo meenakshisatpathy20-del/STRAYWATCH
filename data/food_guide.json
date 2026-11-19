@@ -1,0 +1,32 @@
+{
+  "_note": "Safe-food guide for caretakers and pet owners. Answers come only from this list; anything not listed is 'ask a vet'. Status: drafted from the sources; awaiting partner vet review.",
+  "_sources": {
+    "ASPCA": "ASPCA Animal Poison Control, People foods to avoid feeding pets: https://www.aspca.org/pet-care/aspca-poison-control/people-foods-avoid-feeding-your-pets",
+    "DAHD": "Dept. of Animal Husbandry & Dairying: https://dahd.gov.in"
+  },
+  "guides": {
+    "dog": {"title": "Feeding a street or pet dog", "lines": ["Plain rice or roti with dal, curd, or a cooked egg or cooked meat, once or twice a day.", "Clean water every day, in a clean bowl.", "Feed at the same place and time, away from the road so dogs don't run into traffic.", "No spicy, salty or sweet leftovers."]},
+    "puppy": {"title": "Feeding puppies", "lines": ["3–4 small soft meals a day: rice with curd, mashed dal, or cooked egg.", "Clean water always.", "Ask a vet about deworming and vaccines (rabies and the core puppy vaccines)."]},
+    "cat": {"title": "Feeding cats", "lines": ["Cooked fish or chicken without bones, cooked egg, a little rice.", "Clean water every day.", "Milk is not needed; many adult cats get loose motions from it."]},
+    "cow": {"title": "Feeding cows", "lines": ["Green fodder, dry fodder (straw) and clean water.", "Fruit and vegetable peels are fine in small amounts, never in plastic bags.", "Too many rotis, bread or sweets can upset a cow's stomach."]}
+  },
+  "foods": [
+    {"names": ["chocolate", "चॉकलेट", "চকলেট", "சாக்லேட்", "చాక్లెట్"], "verdict": {"dog": "avoid", "cat": "avoid"}, "why": "Chocolate is poisonous to dogs and cats.", "src": "ASPCA"},
+    {"names": ["grapes", "grape", "raisins", "kishmish", "angoor", "अंगूर", "किशमिश", "আঙুর", "திராட்சை", "ద్రాక్ష"], "verdict": {"dog": "avoid", "cat": "avoid"}, "why": "Grapes and raisins can damage a dog's kidneys.", "src": "ASPCA"},
+    {"names": ["onion", "garlic", "pyaz", "pyaaz", "lahsun", "प्याज", "लहसुन", "পেঁয়াজ", "রসুন", "வெங்காயம்", "பூண்டு", "ఉల్లి", "వెల్లుల్లి"], "verdict": {"dog": "avoid", "cat": "avoid"}, "why": "Onion and garlic damage red blood cells in dogs and cats.", "src": "ASPCA"},
+    {"names": ["cooked bones", "chicken bones", "bones", "haddi", "हड्डी", "হাড়", "எலும்பு", "ఎముక"], "verdict": {"dog": "avoid", "cat": "avoid"}, "why": "Cooked bones splinter and can tear the gut.", "src": "ASPCA"},
+    {"names": ["milk", "doodh", "दूध", "দুধ", "பால்", "పాలు"], "verdict": {"dog": "limit", "cat": "limit", "puppy": "limit", "cow": "safe"}, "why": "Many adult dogs and cats can't digest milk well and get loose motions; curd is usually easier.", "src": "ASPCA"},
+    {"names": ["curd", "dahi", "दही", "দই", "தயிர்", "పెరుగు"], "verdict": {"dog": "safe", "cat": "limit", "puppy": "safe"}, "why": "Plain curd is usually easy on the stomach in small amounts.", "src": "ASPCA"},
+    {"names": ["roti", "chapati", "रोटी", "চাপাতি", "ரொட்டி", "చపాతీ"], "verdict": {"dog": "safe", "cow": "limit"}, "why": "Plain roti is fine for dogs; for cows, a few are fine but too many upset the stomach.", "src": "DAHD"},
+    {"names": ["bread", "pav", "ब्रेड", "পাউরুটি", "ரொட்டி துண்டு", "బ్రెడ్"], "verdict": {"dog": "limit", "cow": "limit"}, "why": "A little plain bread is okay, but it has little nutrition and too much upsets the stomach.", "src": "DAHD"},
+    {"names": ["rice", "chawal", "चावल", "ভাত", "சாதம்", "అన్నం"], "verdict": {"dog": "safe", "cat": "safe", "puppy": "safe"}, "why": "Plain cooked rice is a good base, with dal, curd or egg.", "src": "ASPCA"},
+    {"names": ["egg", "anda", "अंडा", "ডিম", "முட்டை", "గుడ్డు"], "verdict": {"dog": "safe", "cat": "safe", "puppy": "safe"}, "why": "Cooked eggs are good protein. Don't feed raw eggs.", "src": "ASPCA"},
+    {"names": ["biscuit", "biscuits", "parle", "बिस्किट", "বিস্কুট", "பிஸ்கட்", "బిస్కెట్"], "verdict": {"dog": "limit", "puppy": "limit"}, "why": "Sweet biscuits have sugar and little nutrition; fine as a rare treat, not a meal.", "src": "ASPCA"},
+    {"names": ["sweets", "mithai", "sugar", "मिठाई", "চিনি", "মিষ্টি", "இனிப்பு", "స్వీట్లు"], "verdict": {"dog": "avoid", "cat": "avoid", "cow": "avoid"}, "why": "Sweets and sugar-free sweets (xylitol) are harmful; xylitol is poisonous to dogs.", "src": "ASPCA"},
+    {"names": ["plastic", "polythene", "पॉलीथीन", "प्लास्टिक", "প্লাস্টিক", "பிளாஸ்டிக்", "ప్లాస్టిక్"], "verdict": {"cow": "avoid", "dog": "avoid"}, "why": "Never feed food in plastic bags: animals swallow the plastic.", "src": "DAHD"},
+    {"names": ["spicy food", "masala", "leftover curry", "मसालेदार", "ঝাল", "காரம்", "కారం"], "verdict": {"dog": "avoid", "cat": "avoid"}, "why": "Spicy, salty and oily food upsets their stomachs.", "src": "ASPCA"},
+    {"names": ["fish", "machli", "मछली", "মাছ", "மீன்", "చేప"], "verdict": {"cat": "safe", "dog": "safe"}, "why": "Cooked fish without bones is good food.", "src": "ASPCA"},
+    {"names": ["vegetable peels", "peels", "chilka", "छिलका", "খোসা", "தோல்", "తొక్క"], "verdict": {"cow": "safe"}, "why": "Fruit and vegetable peels are fine for cows in small amounts, never in plastic bags.", "src": "DAHD"},
+    {"names": ["green grass", "grass", "fodder", "chara", "चारा", "ঘাস", "புல்", "గడ్డి"], "verdict": {"cow": "safe"}, "why": "Green and dry fodder are a cow's main food.", "src": "DAHD"}
+  ]
+}

@@ -9,7 +9,8 @@
 {% if p.photo %}<meta property="og:image" content="{{ base }}{{ p.photo }}">{% endif %}
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&family=Gochi+Hand&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&family=Gochi+Hand&family=Noto+Sans+Bengali:wght@600&family=Noto+Sans+Devanagari:wght@600&family=Noto+Sans+Tamil:wght@600&family=Noto+Sans+Telugu:wght@600&display=swap" rel="stylesheet">
+<style>.tr{display:block;font-size:.82em;color:var(--ink2);font-weight:700}</style>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -21,21 +22,21 @@
   <div class="card" style="background:{{ 'var(--mint)' if p.status=='found' else 'var(--coral)' }};display:flex;align-items:center;gap:12px;padding:16px">
     {{ d.cow(64) if p.species=='cow' else d.dog(64) }}
     <div>
-      {% if p.status=='found' %}<h1 style="font-size:32px">{{ p.name }} is home!</h1><div class="hand" style="font-size:20px">thank you, neighbours 💛</div>
-      {% else %}<h1 style="font-size:32px">Have you seen {{ p.name }}?</h1><div style="font-family:'Baloo 2';font-weight:700;font-size:19px">क्या आपने {{ p.name }} को देखा?</div>{% endif %}
+      {% if p.status=='found' %}<h1 style="font-size:32px">{{ E.home }}</h1><div style="font-weight:800;font-size:19px" lang="{{ lang }}">{{ L.home }}</div><div class="hand" style="font-size:20px">{{ E.thanks }} · <span lang="{{ lang }}">{{ L.thanks }}</span></div>
+      {% else %}<h1 style="font-size:32px">{{ E.q }}</h1><div style="font-weight:800;font-size:19px" lang="{{ lang }}">{{ L.q }}</div>{% endif %}
     </div>
   </div>
   {% if p.photo %}<img src="{{ p.photo }}" alt="Photo of {{ p.name }}" style="width:100%;border-radius:20px;border:2.5px solid var(--ink)">{% endif %}
-  <div class="card" style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 10px;font-size:16px">
-    <b>Animal</b><span>{{ p.species|title }}</span>
-    <b>Looks</b><span>{{ p.looks or 'See photo' }}</span>
-    <b>Last seen</b><span>{{ p.area }}</span>
-    <b>When</b><span>{{ p.when }}</span>
+  <div class="card" style="display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px 12px;font-size:16px">
+    <b>{{ E.animal }}<span class="tr" lang="{{ lang }}">{{ L.animal }}</span></b><span>{{ E.species }}<span class="tr" lang="{{ lang }}">{{ L.species }}</span></span>
+    <b>{{ E.looks }}<span class="tr" lang="{{ lang }}">{{ L.looks }}</span></b><span>{{ E.looks_v }}<span class="tr" lang="{{ lang }}">{{ L.looks_v }}</span></span>
+    <b>{{ E.last }}<span class="tr" lang="{{ lang }}">{{ L.last }}</span></b><span>{{ p.area }}</span>
+    <b>{{ E.when }}<span class="tr" lang="{{ lang }}">{{ L.when }}</span></b><span>{{ p.when }}</span>
   </div>
   {% if p.status!='found' %}
-  <a class="btn sun big" href="{{ seen_link }}">I've seen {{ p.name }}!</a>
-  <button class="btn" id="share" type="button">Share this poster</button>
-  <p class="hand" style="font-size:19px;text-align:center;color:var(--ink2);margin:0">Tapping "I've seen" opens a chat with StrayWatch.<br>The owner's number is never shown.</p>
+  <a class="btn sun big" href="{{ seen_link }}" style="flex-direction:column;gap:0;padding:8px 20px">{{ E.seen }}<span style="font-size:.75em" lang="{{ lang }}">{{ L.seen }}</span></a>
+  <button class="btn" id="share" type="button">{{ E.share }} · <span lang="{{ lang }}">{{ L.share }}</span></button>
+  <p style="font-size:15px;text-align:center;color:var(--ink2);margin:0">{{ E.how }}<br><span lang="{{ lang }}">{{ L.how }}</span></p>
   {% endif %}
 </main>
 <script>

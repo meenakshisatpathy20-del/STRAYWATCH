@@ -62,7 +62,7 @@ def test_language_first_then_menu(s):
     out = talk(s, "web:1", text="hi")
     assert out[0].options and out[0].options[1][0] == "lang:hi"
     out = talk(s, "web:1", button="lang:en")
-    assert [b[0] for b in out[0].buttons] == ["m:sos", "m:animals", "m:lost"]
+    assert [b[0] for b in out[0].options] == ["m:sos", "m:vet", "m:lost", "m:animals"]
 
 
 def test_sos_alerts_nearest_helper_and_escalates(s, monkeypatch):

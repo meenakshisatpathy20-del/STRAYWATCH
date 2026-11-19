@@ -2,48 +2,90 @@
 {% block title %}Vet care · StrayWatch{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div class="hand">keeping cared-for animals healthy</div>
+  <div class="hand">a vet for every animal</div>
   <h1>Vet care</h1>
-  <p>Daily care is the habit that makes rescue fast. This section helps caretakers reach a vet quickly and avoid the home remedies that hurt animals. The full module (health check, nutrition, vet handover) is being built now.</p>
+  <p>Talk to a verified vet online, for your pet or for a street animal you look after. Tell StrayWatch what's wrong in your own language; it prepares a short summary for the vet, shows safe first steps, and sends emergencies to a clinic first.</p>
 </div>
 
 <div class="grid3">
+  <div class="card" style="box-shadow:5px 5px 0 var(--mint)">
+    <h3 style="font-size:24px">🩺 Talk to a vet</h3>
+    <p>Photo + a few words → a verified vet joins the chat. Video call if needed.</p>
+    <a class="btn mint big" href="/app?go=vet" style="width:100%">Start a consult</a>
+    <p class="note" style="margin-top:8px">{{ online|length }} vet{{ '' if online|length == 1 else 's' }} online now · free for street animals · free during the pilot</p>
+  </div>
   <div class="card" style="box-shadow:5px 5px 0 var(--coral)">
-    <h3 style="font-size:24px">🚑 Need help now?</h3>
-    <p>Government animal ambulance (Mobile Veterinary Unit) helpline, free in Jharkhand and many other states:</p>
-    <a class="btn coral big" href="tel:1962" style="width:100%">Call 1962</a>
-    <p class="note" style="margin-top:8px">If a person is hurt, call 112.</p>
+    <h3 style="font-size:24px">🚑 Emergency?</h3>
+    <p>Trouble breathing, fits, poisoning, bloat, or hit by a vehicle: don't wait for a chat.</p>
+    <a class="btn coral big" href="tel:1962" style="width:100%">Call 1962 (govt. animal ambulance)</a>
+    <button class="btn" id="findVet" type="button" style="width:100%;margin-top:10px">📍 Clinics near me</button>
   </div>
   <div class="card" style="box-shadow:5px 5px 0 var(--sky)">
-    <h3 style="font-size:24px">📍 Find a vet near me</h3>
-    <p>Opens your map app with veterinary clinics around where you are.</p>
-    <button class="btn sky big" id="findVet" type="button" style="width:100%">Show nearby vets</button>
-    <p class="note" style="margin-top:8px">Verified partner vets who treat strays free or at low cost will be listed here first.</p>
-  </div>
-  <div class="card" style="box-shadow:5px 5px 0 var(--mint)">
-    <h3 style="font-size:24px">🐾 Hurt animal on the road?</h3>
-    <p>Report it in the app. The right responder, including partner vets, gets the alert.</p>
-    <a class="btn mint big" href="/app" style="width:100%">Report an animal</a>
+    <h3 style="font-size:24px">🥣 Food &amp; care</h3>
+    <p>What to feed dogs, puppies, cats and cows, and “Can I feed this?” for any food, from a reviewed list.</p>
+    <a class="btn sky big" href="/app?go=food" style="width:100%">Check a food</a>
   </div>
 </div>
+
+<section>
+  <div class="section-title"><h2>Vets online now</h2><span class="hand">verified registration</span></div>
+  <div class="grid3">
+    {% for v in online %}
+    <div class="card"><b class="display" style="font-size:20px">{{ v.name }}</b>
+      <p style="margin:4px 0">{{ v.clinic or '' }}</p>
+      <p class="note" style="margin:0">{{ v.qualification or '' }} · {{ v.council or '' }} · speaks {{ v.langs|join(', ') }}</p>
+      <p style="margin:8px 0 0"><span class="pill LOW">🟢 online</span> <span class="pill">{{ 'free' if v.fee == 0 else '₹' ~ v.fee ~ ' for pets' }}</span>{% if v.free_for_strays %} <span class="pill">free for strays</span>{% endif %}</p>
+    </div>
+    {% else %}
+    <p class="note">No vet is online right now. Start a consult anyway: the first vet who comes online will see it, and you'll get a message.</p>
+    {% endfor %}
+  </div>
+  {% if online and online[0].sample %}<p class="note" style="margin-top:10px">These are <b>sample vets</b> for the prototype. Real vets join below and are listed only after their registration is checked.</p>{% endif %}
+</section>
+
+<section>
+  <div class="section-title"><h2>How a consult works</h2></div>
+  <ol class="flow">
+    <li><span class="n">1</span><b>Tell us</b><p>Pet or street animal, which animal, a photo and a few words in any of 6 languages.</p></li>
+    <li><span class="n">2</span><b>Safe first steps</b><p>A vet-reviewed care card and an urgency. Emergencies go to a clinic or 1962 first.</p></li>
+    <li><span class="n">3</span><b>A vet joins</b><p>Pick a vet online. They see a one-page summary before they say yes.</p><em>next vet after 5 min</em></li>
+    <li><span class="n">4</span><b>Chat or video</b><p>Each side reads in their own language. Photos and a video link.</p></li>
+    <li><span class="n">5</span><b>Vet's note + follow-up</b><p>The vet's advice is saved in the animal's record. We check in after 2 days.</p></li>
+  </ol>
+  <p class="note" style="margin-top:10px">The AI organises and translates; only the vet advises. StrayWatch's AI never diagnoses, names a medicine or gives a dose.</p>
+</section>
 
 <section>
   <div class="section-title"><h2>Please don't</h2><span class="hand">common remedies that harm</span></div>
   <div class="grid3">
     <div class="promise"><div class="dot" style="background:var(--coral-soft)">✗</div><div><b>Kerosene, engine oil or phenyl on wounds</b><p>They burn the skin and can poison the animal. A wound with maggots needs a vet the same day.</p></div></div>
-    <div class="promise"><div class="dot" style="background:var(--coral-soft)">✗</div><div><b>Human medicines</b><p>Many common painkillers are poisonous to dogs and cats. Only give medicine a vet prescribes, at the dose they give.</p></div></div>
+    <div class="promise"><div class="dot" style="background:var(--coral-soft)">✗</div><div><b>Human medicines</b><p>Many common painkillers are poisonous to dogs and cats. Only give what a vet prescribes.</p></div></div>
     <div class="promise"><div class="dot" style="background:var(--coral-soft)">✗</div><div><b>Food in plastic bags for cows</b><p>Cows swallow the plastic with the food, and it builds up in their stomach.</p></div></div>
   </div>
-  <p class="note" style="margin-top:10px">General safety guidance, not a diagnosis. Every card in the coming health check will be reviewed by a partner vet before launch.</p>
 </section>
 
-<section>
-  <div class="section-title"><h2>Coming next</h2><span class="hand">designed, build in progress</span></div>
-  <div class="grid3">
-    <div class="card"><h3>🩺 Health check</h3><p>Photo, symptoms or a Hindi voice note → a vet-reviewed card and an urgency: emergency · today · this week · watch. No diagnosis, no doses.</p></div>
-    <div class="card"><h3>📝 Vet handover</h3><p>A one-page summary for the vet: photos, timeline, symptoms, vaccines. The animal gets seen sooner.</p></div>
-    <div class="card"><h3>🥣 Nutrition + reminders</h3><p>Reviewed food guides for dogs, puppies, cats and cows, “Can I feed this?”, and vaccine and deworming reminders.</p></div>
+<section id="join">
+  <div class="section-title"><h2>Are you a vet? Join StrayWatch</h2><span class="hand">help animals from your phone</span></div>
+  {% if joined %}
+  <div class="card" style="background:var(--mint-soft)">
+    <h3>Thank you, {{ joined.name }}! 🙏</h3>
+    <p>Your vet code is <b class="display" style="font-size:24px">{{ joined.code }}</b>. Open the <a href="/app">StrayWatch app</a> and type <b>vet {{ joined.code }}</b> to link your account. We'll check your registration and message you there when you're verified. Then type <b>online</b> to receive consults.</p>
   </div>
+  {% else %}
+  <form class="card form" method="post" action="/vet/join">
+    <label>Full name<input name="name" required maxlength="80" placeholder="Dr. …"></label>
+    <label>Clinic or hospital<input name="clinic" maxlength="120"></label>
+    <label>Qualification<input name="qualification" maxlength="80" placeholder="e.g. B.V.Sc. &amp; A.H."></label>
+    <label>Veterinary council<input name="council" required maxlength="80" placeholder="e.g. Jharkhand State Veterinary Council"></label>
+    <label>Registration number<input name="reg_no" required maxlength="40"></label>
+    <label>Phone or email (private, for verification)<input name="contact" required maxlength="120"></label>
+    <label>Languages you speak<input name="langs" maxlength="60" placeholder="e.g. hi, en, bn"></label>
+    <label>Fee for pets (₹, 0 = free)<input name="fee" type="number" min="0" max="2000" value="0"></label>
+    <label class="wide check"><input type="checkbox" name="free_for_strays" value="yes" checked> I'll consult free for street animals</label>
+    <label class="wide check"><input type="checkbox" name="consent" value="yes" required> I'm a registered veterinarian. I agree that StrayWatch checks my registration and stores these details to list me (DPDP 2023). I give advice in line with my council's rules and refer in-person when needed.</label>
+    <button class="btn mint" type="submit">Join as a vet</button>
+  </form>
+  {% endif %}
 </section>
 {% endblock %}
 {% block scripts %}

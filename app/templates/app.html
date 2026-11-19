@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&family=Gochi+Hand&family=Noto+Sans+Bengali:wght@600&family=Noto+Sans+Devanagari:wght@600&family=Noto+Sans+Tamil:wght@600&family=Noto+Sans+Telugu:wght@600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
+<script src="/static/i18n.js"></script>
 <style>
   html,body{height:100%}
   body{overflow:hidden}
@@ -31,7 +32,9 @@
   .mini .pic{width:84px;height:68px;flex-shrink:0;border-radius:12px;border:2px solid var(--ink);background:var(--paper) center/cover no-repeat}
   .mini b{font-family:"Baloo 2";font-size:19px;display:block;line-height:1.1}
   .mini span{font-size:13px;color:var(--ink2)}
-  .pushbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--sky-soft);border-bottom:2.5px solid var(--ink);font-weight:700;font-size:14px}
+  .pushbar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--sky-soft);border-bottom:2.5px solid var(--ink);font-weight:700;font-size:13px;line-height:1.25}
+  .pushbar span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .tabbar button span{font-size:12.5px;line-height:1.15;text-align:center}
   .pushbar span{flex:1}.pushbar .x{border:0;background:none;font-size:18px;cursor:pointer;padding:4px}
 </style>
 </head>
@@ -39,64 +42,67 @@
 <div class="app">
   <header class="app-head">
     <a class="logo" href="/">{{ d.dog(34) }}<span>StrayWatch</span></a>
-    <button class="btn small mint install" id="install" type="button">Install app</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn small mint install" id="install" type="button" data-i18n="install">Install app</button>
+      <button class="btn small" id="langBtn" type="button" data-i18n-label="lang_btn" aria-label="Language">🌐</button>
+    </div>
   </header>
 
   <section class="pane on" id="pane-chat" aria-label="Chat">
     <div class="pushbar" id="pushbar" hidden>
-      <span>🔔 Get updates and rescue alerts on this phone, even when the app is closed.</span>
-      <button class="btn small sun" type="button" id="pushOn">Turn on</button>
+      <span data-i18n="push_bar">🔔 Get alerts on this phone, even when the app is closed.</span>
+      <button class="btn small sun" type="button" id="pushOn" data-i18n="push_on">Turn on</button>
       <button class="x" type="button" id="pushX" aria-label="Not now">✕</button>
     </div>
     <div class="msgs" id="msgs" aria-live="polite"></div>
     <form class="composer" id="composer">
-      <label class="icon-btn" title="Send a photo"><span class="sr">Send a photo</span>
+      <label class="icon-btn" data-i18n-label="photo_btn" title="Send a photo"><span class="sr" data-i18n="photo_btn">Send a photo</span>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
         <input type="file" id="file" accept="image/*" capture="environment" hidden>
       </label>
-      <button type="button" class="icon-btn loc" id="locbtn" title="Share location" aria-label="Share location">
+      <button type="button" class="icon-btn loc" id="locbtn" data-i18n-label="loc_btn" title="Share location" aria-label="Share location">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="#FF8A7A" stroke="#2B2340" stroke-width="2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5" fill="#fff"/></svg>
       </button>
       <label for="text" class="sr">Message</label>
-      <input type="text" id="text" placeholder="Type in any language…" autocomplete="off">
-      <button class="icon-btn" aria-label="Send" style="background:var(--sun)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <input type="text" id="text" placeholder="Type in any language…" data-i18n-ph="placeholder" autocomplete="off">
+      <button class="icon-btn" aria-label="Send" data-i18n-label="send_btn" style="background:var(--sun)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </form>
   </section>
 
   <section class="pane" id="pane-lost" aria-label="Lost and found">
     <div class="scroll">
-      <h2 style="font-size:30px">Help them get home</h2>
+      <h2 style="font-size:30px" data-i18n="lost_title">Help them get home</h2>
       {% for p in posts %}
       <a class="mini" href="/lost/{{ p.code }}">
         <div class="pic" role="img" aria-label="Photo of {{ p.name }}" style="background-image:url('{{ p.photo }}')"></div>
         <div><b>{{ p.name }} · {{ p.species }} {% if p.status=='found' %}<span class="tag found">HOME!</span>{% else %}<span class="tag lost">LOST</span>{% endif %}</b>
         <span>{{ p.area }} · {{ p.when }}</span></div>
       </a>
-      {% else %}<p>No lost animals right now. 💛</p>{% endfor %}
-      <p class="note">Lost your animal? Go to Chat → Lost &amp; found.</p>
+      {% else %}<p data-i18n="lost_none">No lost animals right now. 💛</p>{% endfor %}
+      <p class="note" data-i18n="lost_note">Lost your animal? Go to Chat → Lost &amp; found.</p>
     </div>
   </section>
 
   <section class="pane" id="pane-more" aria-label="More">
     <div class="scroll">
-      <h2 style="font-size:30px">My reports</h2>
-      <div id="myCases"><p class="note">Loading…</p></div>
-      <h2 style="font-size:30px;margin-top:6px">Help more</h2>
-      <button class="mini" type="button" id="volBtn" style="font:inherit;text-align:left;cursor:pointer"><div><b>🦸 Become a volunteer</b><span>Get alerts for hurt animals within 8 km. At most 6 a day; pause any time.</span></div></button>
-      <button class="mini" type="button" id="pushBtn2" style="font:inherit;text-align:left;cursor:pointer"><div><b>🔔 Notifications</b><span id="pushState">Turn on alerts for this phone</span></div></button>
-      <a class="mini" href="/vet"><div><b>🩺 Vet care</b><span>Animal ambulance 1962, find a vet near you</span></div></a>
-      <a class="mini" href="/city"><div><b>City view</b><span>Vaccination coverage, rescue times and hotspots near you</span></div></a>
-      <a class="mini" href="/#promise"><div><b>Our promise</b><span>Safety, privacy, and how the AI is used</span></div></a>
-      {% if wa_number %}<a class="mini" href="https://wa.me/{{ wa_number }}?text=hi"><div><b>Also on WhatsApp</b><span>Use StrayWatch from WhatsApp too</span></div></a>
-      {% else %}<div class="mini"><div><b>WhatsApp add-on</b><span>Coming soon: use StrayWatch from WhatsApp too</span></div></div>{% endif %}
-      <p class="note">StrayWatch helps people help animals. It does not replace a vet or emergency services. If a person is hurt, call 112.</p>
+      <h2 style="font-size:30px" data-i18n="my_reports">My reports</h2>
+      <div id="myCases"><p class="note" data-i18n="loading">Loading…</p></div>
+      <h2 style="font-size:30px;margin-top:6px" data-i18n="help_more">Help more</h2>
+      <button class="mini" type="button" id="volBtn" style="font:inherit;text-align:left;cursor:pointer"><div><b data-i18n="vol_title">🦸 Become a volunteer</b><span data-i18n="vol_desc">Get alerts for hurt animals within 8 km. At most 6 a day; pause any time.</span></div></button>
+      <button class="mini" type="button" id="pushBtn2" style="font:inherit;text-align:left;cursor:pointer"><div><b data-i18n="notif_title">🔔 Notifications</b><span id="pushState" data-i18n="notif_off">Turn on alerts for this phone</span></div></button>
+      <a class="mini" href="/vet"><div><b data-i18n="vet_title">🩺 Vet care</b><span data-i18n="vet_desc">Talk to a vet online, animal ambulance 1962</span></div></a>
+      <a class="mini" href="/city"><div><b data-i18n="city_title">City view</b><span data-i18n="city_desc">Where animals get hurt, rescue times and vaccination near you</span></div></a>
+      <a class="mini" href="/promise"><div><b data-i18n="promise_title">Our promise</b><span data-i18n="promise_desc">Safety, privacy, and how the AI is used</span></div></a>
+      {% if wa_number %}<a class="mini" href="https://wa.me/{{ wa_number }}?text=hi"><div><b data-i18n="wa_on_title">Also on WhatsApp</b><span data-i18n="wa_on_desc">Use StrayWatch from WhatsApp too</span></div></a>
+      {% else %}<div class="mini"><div><b data-i18n="wa_title">WhatsApp add-on</b><span data-i18n="wa_desc">Coming soon: use StrayWatch from WhatsApp too</span></div></div>{% endif %}
+      <p class="note" data-i18n="foot">StrayWatch helps people help animals. It does not replace a vet or emergency services. If a person is hurt, call 112.</p>
     </div>
   </section>
 
   <nav class="tabbar" role="tablist" aria-label="Sections">
-    <button role="tab" aria-selected="true" data-tab="chat">{{ d.heart(22) }}Chat</button>
-    <button role="tab" aria-selected="false" data-tab="lost"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="#fff"/><path d="M15 15l5.5 5.5"/></svg>Lost &amp; Found</button>
-    <button role="tab" aria-selected="false" data-tab="more">{{ d.paw(22) }}More</button>
+    <button role="tab" aria-selected="true" data-tab="chat">{{ d.heart(22) }}<span data-i18n="tab_chat">Chat</span></button>
+    <button role="tab" aria-selected="false" data-tab="lost"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2B2340" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="#fff"/><path d="M15 15l5.5 5.5"/></svg><span data-i18n="tab_lost">Lost &amp; Found</span></button>
+    <button role="tab" aria-selected="false" data-tab="more">{{ d.paw(22) }}<span data-i18n="tab_more">More</span></button>
   </nav>
 </div>
 <script>
@@ -113,7 +119,7 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").cat
 const canPush = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 const b64ToBytes = (s) => { s = s.replace(/-/g, "+").replace(/_/g, "/"); s += "===".slice((s.length + 3) % 4); const r = atob(s); return Uint8Array.from(r, c => c.charCodeAt(0)); };
 async function enablePush() {
-  if (!canPush) { alert("This browser can't show notifications. Keep StrayWatch open, or use the WhatsApp add-on."); return false; }
+  if (!canPush) { alert(swT("push_unsupported")); return false; }
   const perm = await Notification.requestPermission();
   if (perm !== "granted") { showPushState(); return false; }
   const reg = await navigator.serviceWorker.ready;
@@ -124,9 +130,9 @@ async function enablePush() {
   showPushState(); return true;
 }
 function showPushState() {
-  const st = !canPush ? "Not supported in this browser" : Notification.permission === "granted" ? "On ✅" :
-             Notification.permission === "denied" ? "Blocked: allow notifications in your browser settings" : "Turn on alerts for this phone";
-  document.getElementById("pushState").textContent = st;
+  const k = !canPush ? "notif_unsupported" : Notification.permission === "granted" ? "notif_on" :
+            Notification.permission === "denied" ? "notif_blocked" : "notif_off";
+  const ps = document.getElementById("pushState"); ps.dataset.i18n = k; ps.textContent = swT(k);
   let dismissed = false; try { dismissed = localStorage.getItem("sw_push_x") === "1"; } catch (e) {}
   document.getElementById("pushbar").hidden = !(canPush && Notification.permission === "default" && !dismissed);
 }
@@ -143,10 +149,16 @@ async function loadMine() {
     const j = await (await fetch("/api/my/cases")).json();
     box.innerHTML = j.cases.length ? j.cases.map(c => `<a class="mini" href="${c.track}"><div class="pic" style="background-image:url('${c.photo || ""}')"></div>
       <div><b>${c.code} · ${c.species}</b><span>${c.status_words} · ${c.created}</span></div></a>`).join("")
-      : '<p class="note">No reports yet. See an animal in trouble? Go to Chat and tap “Hurt animal: SOS”.</p>';
-  } catch (e) { box.innerHTML = '<p class="note">Couldn\'t load your reports. Check your network.</p>'; }
+      : `<p class="note">${swT("reports_none")}</p>`;
+  } catch (e) { box.innerHTML = `<p class="note">${swT("reports_err")}</p>`; }
 }
 document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => { if (b.dataset.tab === "more") loadMine(); }));
+document.getElementById("langBtn").onclick = () => {
+  document.querySelector('[data-tab="chat"]').click();
+  const t = document.getElementById("text"); t.value = "language";
+  document.getElementById("composer").requestSubmit();
+};
+window.addEventListener("sw-lang", showPushState);
 document.getElementById("volBtn").onclick = () => {
   document.querySelector('[data-tab="chat"]').click();
   const t = document.getElementById("text"); t.value = "volunteer";

@@ -17,8 +17,8 @@ from sqlalchemy import func, select
 
 from . import config, engine, push
 from .channels import whatsapp
-from .db import (Animal, Case, CaseEvent, CheckIn, LostPost, Outbox, PartnerLead, Photo, SessionLocal, Sighting, Trace,
-                 User, init_db)
+from .db import (Animal, Case, CaseEvent, CheckIn, Consult, LostPost, Outbox, PartnerLead, Photo, SessionLocal, Sighting,
+                 Trace, User, VetProfile, init_db)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("straywatch")
@@ -26,6 +26,10 @@ HERE = Path(__file__).resolve().parent
 @asynccontextmanager
 async def lifespan(_app):
     init_db()
+    with SessionLocal() as s:
+        n = engine.seed_translations(s)
+        if n:
+            log.info("loaded %s pre-made translations", n)
     if config.DEMO_MODE:
         from .seed import seed
         await asyncio.to_thread(seed)
@@ -185,8 +189,64 @@ def lost_page(request: Request):
 
 
 @app.get("/vet", response_class=HTMLResponse)
-def vet_page(request: Request):
-    return page(request, "vet.html", "/vet")
+def vet_page(request: Request, joined: str = ""):
+    with SessionLocal() as s:
+        online = list(s.scalars(select(VetProfile).where(VetProfile.verified.is_(True), VetProfile.online.is_(True),
+                                                         VetProfile.user_id.is_not(None)).order_by(VetProfile.fee)))
+        j = s.scalars(select(VetProfile).where(VetProfile.code == joined.upper())).first() if joined else None
+        return page(request, "vet.html", "/vet", online=online, joined=j)
+
+
+@app.post("/vet/join")
+def vet_join(name: str = Form(...), council: str = Form(...), reg_no: str = Form(...), contact: str = Form(...),
+             clinic: str = Form(""), qualification: str = Form(""), langs: str = Form(""), fee: int = Form(0),
+             free_for_strays: str = Form(""), consent: str = Form("")):
+    """A vet signs up. They are listed only after a person checks the registration (see /admin/vets)."""
+    from fastapi.responses import RedirectResponse
+    from . import vet as vetmod
+    if consent != "yes" or not name.strip() or not reg_no.strip():
+        raise HTTPException(400, "Please fill in your name and registration, and tick the consent box.")
+    known = {"en", "hi", "bn", "ta", "te", "mr"}
+    ls = [x.strip().lower()[:2] for x in langs.replace(";", ",").split(",") if x.strip()[:2].lower() in known] or ["en", "hi"]
+    with _lock, SessionLocal() as s:
+        code = vetmod.new_code(s)
+        s.add(VetProfile(code=code, name=name.strip()[:80], clinic=clinic.strip()[:120] or None,
+                         qualification=qualification.strip()[:80] or None, council=council.strip()[:80],
+                         reg_no=reg_no.strip()[:40], contact=contact.strip()[:120], langs=ls, species=["any"],
+                         fee=max(0, min(2000, fee)), free_for_strays=free_for_strays == "yes", verified=False))
+        s.commit()
+    return RedirectResponse(f"/vet?joined={code}#join", status_code=303)
+
+
+@app.get("/admin/vets", response_class=HTMLResponse)
+def admin_vets(request: Request, key: str = ""):
+    """Verify vets' registrations. Needs SW_ADMIN_KEY."""
+    if not config.ADMIN_KEY or not secrets.compare_digest(key, config.ADMIN_KEY):
+        raise HTTPException(404)
+    with SessionLocal() as s:
+        vets = list(s.scalars(select(VetProfile).where(VetProfile.sample.is_(False)).order_by(VetProfile.verified, VetProfile.id)))
+        return page(request, "admin_vets.html", None, vets=vets, key=key)
+
+
+@app.post("/admin/vets/{vid}/verify")
+def admin_verify(vid: int, key: str = Form(""), on: str = Form("yes")):
+    from fastapi.responses import RedirectResponse
+    if not config.ADMIN_KEY or not secrets.compare_digest(key, config.ADMIN_KEY):
+        raise HTTPException(404)
+    with _lock, SessionLocal() as s:
+        v = s.get(VetProfile, vid)
+        if not v:
+            raise HTTPException(404)
+        v.verified = on == "yes"
+        if not v.verified:
+            v.online = False
+        outs = []
+        if v.verified and v.user_id:
+            outs.append(engine.Out(v.user_id, f"✅ {v.name}, your registration is verified! Type *online* to start "
+                                              "receiving consults, *offline* to stop."))
+        deliver(s, outs)
+        s.commit()
+    return RedirectResponse(f"/admin/vets?key={key}", status_code=303)
 
 
 @app.get("/promise", response_class=HTMLResponse)
@@ -347,8 +407,21 @@ def poster(request: Request, code: str):
         card = post_card(p)
     seen_link = (f"https://wa.me/{config.WA_DISPLAY_NUMBER}?text=SEEN%20{card['code']}" if config.WA_DISPLAY_NUMBER
                  else f"/app?seen={card['code']}")
-    return templates.TemplateResponse(request, "poster.html", {"p": card, "seen_link": seen_link,
-                                                               "base": config.PUBLIC_BASE_URL})
+    # Bilingual poster: English plus the owner's language (Hindi if the owner uses English), for local groups.
+    with SessionLocal() as s:
+        post = s.scalar(select(LostPost).where(LostPost.code == code.upper()))
+        owner = s.get(User, post.owner_id) if post else None
+        lang = (owner.lang if owner and owner.lang and owner.lang != "en" else "hi")
+        en = {"q": f"Have you seen {card['name']}?", "home": f"{card['name']} is home!", "thanks": "thank you, neighbours 💛",
+              "animal": "Animal", "looks": "Looks", "last": "Last seen", "when": "When",
+              "seen": f"I've seen {card['name']}!", "share": "Share this poster",
+              "how": "The button above opens a chat with StrayWatch. The owner's number is never shown.",
+              "species": card["species"].title(), "looks_v": card["looks"] or "See photo"}
+        tr = engine.translate_texts(s, list(en.values()), lang)
+        s.commit()
+    L = {k: tr.get(v, v) for k, v in en.items()}
+    return templates.TemplateResponse(request, "poster.html", {"p": card, "seen_link": seen_link, "E": en, "L": L,
+                                                               "lang": lang, "base": config.PUBLIC_BASE_URL})
 
 
 AGENT_LABELS = {"Triage": "Triage agent", "Rules": "Urgency rules (code)", "Dispatch": "Dispatch agent",

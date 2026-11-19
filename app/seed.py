@@ -13,7 +13,7 @@ from PIL import Image, ImageEnhance, ImageOps
 from sqlalchemy import select
 
 from . import photos
-from .db import Animal, Case, CaseEvent, LostPost, SessionLocal, Setting, Sighting, User, now
+from .db import Animal, Case, CaseEvent, LostPost, SessionLocal, Setting, Sighting, User, VetProfile, now
 
 PHOTOS = Path(__file__).resolve().parent.parent / "data" / "demo_photos"
 SAMPLES = Path(__file__).resolve().parent / "static" / "samples"
@@ -60,6 +60,25 @@ RESPONDERS = [
     ("demo:police", "Sample traffic police desk", "police", "hi", (23.3650, 85.3300)),
     ("demo:coord", "Sample duty coordinator", "coordinator", "en", (23.3441, 85.3096)),
 ]
+
+
+# Sample online vets for the demo. Clearly labelled "Sample"; real vets sign up at /vet/join and are verified first.
+SAMPLE_VETS = [
+    ("demo:vet1", "VET-1001", "Dr. Sample Asha (sample vet)", "Sample Pet Clinic, Lalpur", ["en", "hi"], 199, True, True),
+    ("demo:vet2", "VET-1002", "Dr. Sample Rohan (sample vet)", "Sample Animal Hospital, Ratu Road", ["en", "hi", "bn"], 0, True, True),
+    ("demo:vet3", "VET-1003", "Dr. Sample Meena (sample vet)", "Sample Cattle Care, Kanke", ["hi", "en"], 149, True, False),
+]
+
+
+def seed_vets(s):
+    for uid, code, name, clinic, langs, fee, strays, online in SAMPLE_VETS:
+        if not s.get(User, uid):
+            s.add(User(id=uid, name=name, lang="en", role="vet", state={}))
+        if not s.query(VetProfile).filter_by(code=code).first():
+            s.add(VetProfile(user_id=uid, code=code, name=name, clinic=clinic, qualification="B.V.Sc. & A.H. (sample)",
+                             council="Sample State Veterinary Council", reg_no="SAMPLE", verified=True, online=online,
+                             langs=langs, species=["any"], fee=fee, free_for_strays=strays, sample=True))
+    s.commit()
 
 
 def seed_responders(s):
@@ -162,6 +181,7 @@ def seed():
     make_samples()
     with SessionLocal() as s:
         seed_responders(s)
+        seed_vets(s)
         seed_cases(s)
         if s.get(User, "demo:priya"):
             return
