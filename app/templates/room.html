@@ -8,6 +8,7 @@
   <p>Every report becomes one case. Six agents and the people on call work from the same ledger: who reported it, what the AI read, which rule fired, who was alerted, who accepted, and the proof photo. This page updates live.</p>
 </div>
 
+<div class="netbox" id="agentnet" aria-hidden="true"></div>
 <div class="agents" id="agents" aria-label="Agents">
   {% for a, icon, what in [("Triage","🔍","reads photos + text"),("Identify","🐾","recognises known animals"),("Camera","🎥","spots animals lying in lanes"),("Rules","⚖️","sets urgency (code)"),("Dispatch","📣","alerts the right team"),("Watch","⏱️","escalates on time"),("Hotspot","📈","finds where animals get hurt")] %}
   <div class="agent" data-agent="{{ a }}"><span class="ai">{{ icon }}</span><div><b>{{ a }}{% if a != "Rules" %} agent{% endif %}</b><small>{{ what }}</small></div><span class="count" title="steps in the last 24 hours">0</span></div>
@@ -37,7 +38,14 @@
   let sel = null;
   async function load(){
     const j = await (await fetch("/api/room")).json();
-    document.querySelectorAll(".agent").forEach(el => { el.querySelector(".count").textContent = j.agents[el.dataset.agent] || 0; });
+    const busy = [];
+    document.querySelectorAll(".agent").forEach(el => {
+      const c = el.querySelector(".count"), n = j.agents[el.dataset.agent] || 0;
+      if (window._agentSeen && n > (+c.textContent || 0)) busy.push(el.dataset.agent);
+      c.textContent = n;
+    });
+    window._agentSeen = true;
+    if (busy.length) dispatchEvent(new CustomEvent("sw-agents", { detail: busy }));
     const box = document.getElementById("cases");
     if (!j.cases.length) { box.innerHTML = '<p class="note">No cases yet. Report one in the <a href="/demo">live demo</a>.</p>'; return; }
     if (sel === null) sel = j.cases[0].id;
@@ -71,6 +79,7 @@
     rp.disabled = false; load();
   };
   load(); setInterval(load, 5000);
+  addEventListener("load", () => setTimeout(() => import("/static/scene.js"), 300));
   swMap("roommap", { onCase: (id) => { sel = id; load(); document.getElementById("detail").scrollIntoView({ behavior: "smooth", block: "start" }); } });
 })();
 </script>

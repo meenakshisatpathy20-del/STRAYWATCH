@@ -39,6 +39,8 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="StrayWatch", lifespan=lifespan, docs_url="/api/docs", redoc_url=None)
+from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # pages and scripts load faster on slow phones
 app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
 templates = Jinja2Templates(directory=HERE / "templates")
 _lock = threading.Lock()  # one conversation step at a time keeps SQLite happy and state consistent

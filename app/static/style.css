@@ -274,3 +274,12 @@ pre.code{margin:0;white-space:pre-wrap;font-size:14px;background:#1b1626;color:#
 .sw-cam{font-size:20px;line-height:26px;text-align:center;background:#fff;border:2px solid var(--ink);border-radius:50%}
 .leaflet-popup-content{font:600 13px Nunito,sans-serif}
 @media (max-width:700px){.mapbox{height:340px}}
+
+/* ---------- 3D scenes (only when the device can run them) ---------- */
+.hero3d{position:relative;width:100%;max-width:520px;aspect-ratio:400/320}
+.hero3d svg{width:100%;height:100%}
+.hero3d.on svg{display:none}
+.hero3d canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
+.netbox{display:none;height:240px;border:2.5px solid var(--ink);border-radius:var(--r);background:linear-gradient(180deg,#fff,var(--sun-soft));box-shadow:var(--shadow);overflow:hidden}
+.netbox.on{display:block}
+.netbox canvas{width:100%!important;height:100%!important}
