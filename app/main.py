@@ -361,6 +361,65 @@ async def chat(request: Request, response: Response, text: str = Form(""), butto
     return {"messages": msgs, "me": uid}
 
 
+# ------------------------------------------------------------------ agent protocol (edge agents → Agent Room)
+
+def _camera_event(ev: dict) -> dict:
+    import base64
+    cam_id = str(ev.get("camera_id", ""))
+    if cam_id not in engine.CAMERAS:
+        raise HTTPException(400, "unknown camera")
+    try:
+        img = base64.b64decode(ev.get("snapshot_jpeg_b64", ""), validate=True)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "bad snapshot")
+    if not img or len(img) > 4 * 1024 * 1024:
+        raise HTTPException(400, "snapshot missing or too large")
+    with _lock, SessionLocal() as s:
+        try:
+            case, outs = engine.camera_case(s, cam_id, ev, img)
+            deliver(s, outs)
+            s.commit()
+        except Exception:
+            s.rollback()
+            log.exception("camera event failed")
+            raise HTTPException(500, "could not open a case")
+        return {"case": f"SW-{case.id}" if case else None, "level": case.level if case else None,
+                "status": case.status if case else None,
+                "summary": f"SW-{case.id} · {case.level} · {case.status}" if case else "no case"}
+
+
+@app.post("/api/agents/camera/events")
+async def camera_event(request: Request):
+    """Edge Camera agents post here (deck: agent protocol over REST). Needs X-Agent-Key unless in demo mode."""
+    key = request.headers.get("X-Agent-Key", "")
+    if config.AGENT_KEY:
+        if not secrets.compare_digest(key, config.AGENT_KEY):
+            raise HTTPException(401, "bad agent key")
+    elif not config.DEMO_MODE:
+        raise HTTPException(401, "set SW_AGENT_KEY to accept camera events")
+    ev = await request.json()
+    return await asyncio.to_thread(_camera_event, ev)
+
+
+@app.post("/api/agents/camera/replay")
+async def camera_replay():
+    """Demo only: replay an event the edge agent really produced on recorded footage (data/camera_samples)."""
+    if not config.DEMO_MODE:
+        raise HTTPException(404)
+    sample = HERE.parent / "data" / "camera_samples" / "event_1.json"
+    if not sample.exists():
+        raise HTTPException(404, "no recorded sample")
+    import json as _json
+    return await asyncio.to_thread(_camera_event, _json.loads(sample.read_text()))
+
+
+@app.get("/api/signboards")
+def api_signboards():
+    """JSON feed for roadside signboards near hotspot cameras."""
+    with SessionLocal() as s:
+        return {"boards": engine.signboards(s)}
+
+
 @app.get("/api/inbox")
 def inbox(request: Request, response: Response, as_user: str = ""):
     uid = as_user if as_user.startswith("demo:") else _web_user(request, response)
