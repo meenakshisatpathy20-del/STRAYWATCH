@@ -33,6 +33,7 @@ class User(Base):
     trust: Mapped[int] = mapped_column(Integer, default=0)  # +1 confirmed useful report, -1 rejected
     role: Mapped[str | None] = mapped_column(String(20))  # responder team: ngo|vet|municipal_cattle|abc|police|coordinator
     org: Mapped[str | None] = mapped_column(String(80))   # e.g. "Ranchi Municipal Corporation cattle team"
+    approved: Mapped[bool | None] = mapped_column(Boolean)  # volunteers: False = waiting for a coordinator; None/True = ok
     last_seen: Mapped[datetime] = mapped_column(DateTime, default=now)
     created: Mapped[datetime] = mapped_column(DateTime, default=now)
 

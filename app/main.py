@@ -344,6 +344,35 @@ def shop_order_page(request: Request, code: str):
         return page(request, "shop_order.html", "/shop", o=o, mine=mine)
 
 
+@app.get("/admin/helpers", response_class=HTMLResponse)
+def admin_helpers(request: Request, key: str = ""):
+    """New volunteers waiting for a check (when no coordinator is on StrayWatch yet). Needs SW_ADMIN_KEY."""
+    if not config.ADMIN_KEY or not secrets.compare_digest(key, config.ADMIN_KEY):
+        raise HTTPException(404)
+    with SessionLocal() as s:
+        rows = list(s.scalars(select(User).where(User.is_volunteer.is_(True), User.approved.is_(False))))
+        return page(request, "admin_helpers.html", None, rows=rows, key=key)
+
+
+@app.post("/admin/helpers/{uid}")
+def admin_helper_ok(uid: str, key: str = Form(""), on: str = Form("yes")):
+    from fastapi.responses import RedirectResponse
+    if not config.ADMIN_KEY or not secrets.compare_digest(key, config.ADMIN_KEY):
+        raise HTTPException(404)
+    with _lock, SessionLocal() as s:
+        h = s.get(User, uid)
+        if h and h.is_volunteer:
+            if on == "yes":
+                h.approved = True
+                deliver(s, [engine.Out(h.id, "✅ You're approved as a StrayWatch helper! 🦸 I'll alert you about hurt "
+                                             f"animals within {config.HELPER_RADIUS_KM:g} km. Type *cases* to see animals "
+                                             "near you that still need someone.")])
+            else:
+                h.is_volunteer = False
+            s.commit()
+    return RedirectResponse(f"/admin/helpers?key={key}", status_code=303)
+
+
 @app.get("/admin/orders", response_class=HTMLResponse)
 def admin_orders(request: Request, key: str = ""):
     """Orders and vet bookings to confirm by phone. Needs SW_ADMIN_KEY."""

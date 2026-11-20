@@ -13,7 +13,7 @@ animal is safe. Pet owners and caretakers can also **talk to a verified vet onli
 <p>
 <a href="https://straywatch-0h6w.onrender.com"><img alt="Live site" src="https://img.shields.io/badge/live-straywatch-FFD23F?style=for-the-badge"></a>
 <a href="https://straywatch-0h6w.onrender.com/video"><img alt="Demo video" src="https://img.shields.io/badge/demo-5_min_video-FF8A7A?style=for-the-badge"></a>
-<img alt="Tests" src="https://img.shields.io/badge/tests-97_passing-3BC9A3?style=for-the-badge">
+<img alt="Tests" src="https://img.shields.io/badge/tests-101_passing-3BC9A3?style=for-the-badge">
 <img alt="Languages" src="https://img.shields.io/badge/languages-6-5BC0EB?style=for-the-badge">
 </p>
 
@@ -34,7 +34,7 @@ watch the AI read it, the rules set **URGENT**, and the caretaker's phone (right
 
 | | What happens |
 |---|---|
-| 🚨 **Rescue** | A citizen sends a photo, a few words or a typed landmark; a road camera can also spot an animal **lying** in a lane. The AI reads it, **tested rules** set the urgency, and the right responder is alerted: the animal's caretaker first, then a rescue NGO and a vet; the municipal cattle team for cows; traffic police to guard the spot on busy roads. No reply? It moves on by itself, then to the duty coordinator. Closed only with a **photo proof** the AI checks. The reporter follows every step on a private tracking link. |
+| 🚨 **Rescue** | A citizen sends a photo, a few words or a typed landmark; a road camera can also spot an animal **lying** in a lane. The AI reads it, **tested rules** set the urgency, and the right responder is alerted: the animal's caretaker first, then a rescue NGO and a vet; the municipal cattle team for cows; traffic police to guard the spot on busy roads. No reply? It moves on by itself, then to the duty coordinator. Closed only with a **photo proof** the AI checks. The reporter follows every step on a private tracking link. **For rescuers:** a private chat with the reporter (no numbers shared), an *open cases near me* list to pick up waiting cases, a *Need transport* request to NGOs and city teams, and animal hospitals near the spot. New helpers are **approved by a coordinator** before they see any animal's location. |
 | 🩺 **Vet care** | For a pet or a street animal: a short AI pre-check prepares a **one-page summary for the vet**, shows a **vet-reviewed care card** (what to do now, what not to do), and sends emergencies to a clinic or the government animal ambulance **1962** first. Then a **verified vet** joins a live chat (each side reads in their own language, photos, a video link), writes a note, and StrayWatch checks in after 2 days. Food guide and “Can I feed this?” included. |
 | 📅 **Book a vet** | Pick a verified vet, video consult or clinic visit, a day and a free 30-minute slot. The vet gets the summary in their chat; the owner gets a booking page with the video link and can cancel anytime. A slot can never be double-booked. |
 | 🛒 **Food & nutrition** | Generic, good-quality food for dogs, puppies, cats, kittens and cattle (mineral mixture, balanced feed), bowls and a **street-dog feeding pack** delivered to a volunteer feeder. Priced on the server, confirmed by phone, **pay on delivery**. Vaccination schedules for dogs, cats and cows on the vet page. |
@@ -136,7 +136,7 @@ Code map: `app/rules.py` (urgency rules) · `app/engine.py` (conversations, disp
 | Report → caretaker alerted | ~10 s on the free live server |
 | Camera agent | Alert for dogs lying on a road; 0 alerts for healthy cows walking on real road video; ~35 ms per frame on a 4-core CPU |
 | Two-city load test (1,238 reports) | Every case got a responder; 0 alerts beyond 8 km or to the wrong city; daily cap held |
-| Automated tests | 97, run in GitHub Actions |
+| Automated tests | 101, run in GitHub Actions |
 
 Honest limits: the responder teams and vets on the live site are **samples** until real partners join (bookings with a
 sample vet are clearly marked as demo bookings); food orders are confirmed by phone and paid on delivery, with no online
@@ -153,7 +153,7 @@ python -m pytest -q tests                   # offline tests with a stand-in AI
 ```
 
 Demo mode (on by default) seeds clearly labelled sample responders, vets, animals and cases around Ranchi.
-Optional settings: `SW_ADMIN_KEY` (verify vets at `/admin/vets`, orders and bookings at `/admin/orders`), `SW_AGENT_KEY` (camera agents),
+Optional settings: `SW_ADMIN_KEY` (verify vets at `/admin/vets`, orders and bookings at `/admin/orders`, new helpers at `/admin/helpers`), `SW_AGENT_KEY` (camera agents),
 `WHATSAPP_*` (WhatsApp add-on). See [`.env.example`](.env.example).
 
 **Deploy:** Render → New → Blueprint → this repo ([`render.yaml`](render.yaml)); add `ADAPTION_API_KEY` and a Postgres

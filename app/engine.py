@@ -162,6 +162,14 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
             return vet.relay(s, u, c, text, photo_id)
         if not c:
             u.state = st = {}
+    # 1c. Reporter <-> rescuer chat on an active case (numbers stay private).
+    if st.get("flow") == "casechat" and not b:
+        c = s.get(Case, (st.get("d") or {}).get("case", 0))
+        if words.is_stop_chat(text):
+            u.state = {}
+            return [Out(u.id, "Chat ended. Tap *Reply* on any new message to talk again. 💛")]
+        if c and (text or photo_id or inc.lat is not None):
+            return case_chat_relay(s, u, c, text, photo_id, inc.lat, inc.lon)
     if st.get("flow") == "vet_note" and text and not b:
         return vet.save_note(s, u, inc.text or "")
     if text and not b:
@@ -183,6 +191,10 @@ def handle(s: Session, user_id: str, inc: Incoming) -> list[Out]:
                           "and share the location where you saw it.", ask_location=True)]
     if words.is_volunteer(text) or b == "vol:yes":
         return volunteer_join(s, u)
+    if b.startswith(("vol:ok:", "vol:reject:")):
+        return approve_helper(s, u, b)
+    if words.wants_cases(text) or b == "m:cases":
+        return open_cases(s, u)
     if b == "loc:denied":  # the phone refused GPS: never guess a location, ask for a landmark instead
         return [Out(u.id, "I couldn't get your location. 📍\nPlease turn on Location for this site (tap the 🔒 or ⓘ "
                           "next to the web address), or just *type a nearby landmark and area*, e.g. Lalpur Chowk, Ranchi.")]
@@ -352,16 +364,105 @@ def photo_choice(s, u, b) -> list[Out]:
 
 
 def volunteer_join(s, u) -> list[Out]:
+    """Sign up as a helper: name and group, usual area, then a local coordinator approves (real use only)."""
     u.is_volunteer = True
+    if not u.name:
+        u.state = {"flow": "volunteer_name", "d": {}}
+        return [Out(u.id, "Thank you for joining as a helper! 🦸 What's your name, and which group are you with, if any? "
+                          "(e.g. *Ravi, Lalpur feeders* or *Asha, college NSS*)")]
     if u.lat is None:
         u.state = {"flow": "volunteer_loc", "d": {}}
-        return [Out(u.id, "Thank you for joining as a helper! 🦸 Share your usual location so I only alert you about "
-                          "animals nearby. (Or type your area, e.g. *Lalpur, Ranchi*.)", ask_location=True)]
+        return [Out(u.id, "Share your usual location so I only alert you about animals nearby. "
+                          "(Or type your area, e.g. *Lalpur, Ranchi*.)", ask_location=True)]
     tip = "" if u.id.startswith("wa:") else ("\n\n🔔 Important: in the app, turn on *notifications* (More → Notifications) "
                                             "so alerts reach you even when StrayWatch is closed.")
+    if u.approved is None and not config.DEMO_RUN.get() and not u.id.startswith("demo:"):
+        u.approved = False  # a person checks every new helper before they receive animal locations
+        coords = real_only([h.id for dist, h in nearby(s, User, u.lat, u.lon, CITY_RADIUS_KM * 3, role="coordinator")], False)
+        coords += [h.id for dist, h in nearby(s, User, u.lat, u.lon, CITY_RADIUS_KM, role="ngo")
+                   if not h.id.startswith("demo:")][:2]
+        area = f"{u.lat:.2f}, {u.lon:.2f}"
+        outs = [Out(cid, f"🦸 New helper wants to join: *{u.name}*, near {area} (about 1 km).\n"
+                         "Approve them to receive rescue alerts?", link=maps_link(round(u.lat, 2), round(u.lon, 2)),
+                    buttons=[(f"vol:ok:{u.id}", "Approve"), (f"vol:reject:{u.id}", "Not now")]) for cid in dict.fromkeys(coords)]
+        return [Out(u.id, f"Thank you, {u.name}! 🙏 A local coordinator checks every new helper before they get "
+                          "animal locations; it usually takes a day. I'll message you here when you're approved. "
+                          "Meanwhile you can report animals any time." + tip)] + outs
+    if u.approved is False:
+        return [Out(u.id, "Your helper sign-up is waiting for a coordinator's check. I'll message you when you're approved. 🙏")]
     return [Out(u.id, "You're a StrayWatch helper now! 🦸 I'll only alert you about animals within "
                       f"{config.HELPER_RADIUS_KM:g} km, at most {config.MAX_ALERTS_PER_HELPER_PER_DAY} times a day. "
-                      "Type *pause* to stop alerts." + tip)]
+                      "Type *cases* to see animals near you that still need someone. Type *pause* to stop alerts." + tip)]
+
+
+def approve_helper(s, u: User, b: str) -> list[Out]:
+    """A coordinator or NGO approves (or declines) a new helper."""
+    _, verdict, hid = b.split(":", 2)
+    if u.role not in ("coordinator", "ngo"):
+        return [Out(u.id, "Only coordinators and NGO partners can approve helpers.")]
+    h = s.get(User, hid)
+    if not h or not h.is_volunteer:
+        return [Out(u.id, "That helper was not found.")]
+    if h.approved:
+        return [Out(u.id, f"{h.name or 'This helper'} is already approved. 💛")]
+    if verdict == "ok":
+        h.approved = True
+        return [Out(u.id, f"✅ {h.name or 'The helper'} is approved. Thank you!"),
+                Out(h.id, "✅ You're approved as a StrayWatch helper! 🦸 I'll alert you about hurt animals within "
+                          f"{config.HELPER_RADIUS_KM:g} km. Type *cases* to see animals near you that still need someone.")]
+    h.is_volunteer = False
+    return [Out(u.id, "Okay, not approved. 💛")]
+
+
+def open_cases(s, u: User) -> list[Out]:
+    """For approved helpers and teams: animals nearby that still need someone, nearest and most urgent first."""
+    if not (u.is_volunteer or u.role) or u.approved is False:
+        return [Out(u.id, "This list is for StrayWatch helpers. Type *volunteer* to join.")]
+    if u.lat is None:
+        u.state = {"flow": "volunteer_loc", "d": {}}
+        return [Out(u.id, "Share your location so I can show cases near you.", ask_location=True)]
+    radius = config.HELPER_RADIUS_KM if not u.role or u.role == "volunteer" else CITY_RADIUS_KM
+    demo = config.DEMO_RUN.get() or u.id.startswith("demo:")
+    rows = [(d, c) for d, c in nearby(s, Case, u.lat, u.lon, radius)
+            if c.status in ("alerting", "unanswered") and c.reporter_id != u.id and is_demo_case(c) == demo]
+    rows.sort(key=lambda r: (-RANK.get(r[1].level or "LOW", 0), r[0]))
+    if not rows:
+        return [Out(u.id, f"No animal within {radius:g} km is waiting for help right now. 💛 I'll alert you when one is.")]
+    outs = [Out(u.id, f"📋 {len(rows)} animal(s) near you still need someone. Nearest and most urgent first:")]
+    for d, c in rows[:5]:
+        outs.append(Out(u.id, f"*Case SW-{c.id} · {LEVEL_WORDS.get(c.level or 'CHECK')}* · {d:.1f} km\n"
+                              f"{(c.triage or {}).get('summary', '')}", image_url=photo_url(c.photo_id),
+                        link=maps_link(c.lat, c.lon), buttons=[(f"case:go:{c.id}", "I'll take it")]))
+    return outs
+
+
+def case_chat_start(s, u: User, c: Case) -> list[Out]:
+    if c.status != "assigned" or u.id not in (c.reporter_id, c.assigned_to):
+        return [Out(u.id, "This case isn't active any more. 💛")]
+    other = "the rescuer" if u.id == c.reporter_id else "the person who reported it"
+    u.state = {"flow": "casechat", "d": {"case": c.id}}
+    return [Out(u.id, f"💬 Type your message for {other} (case SW-{c.id}). You can send a photo or your location too. "
+                      "Phone numbers stay private. Type *stop* to end.")]
+
+
+def case_chat_relay(s, u: User, c: Case, text: str, photo_id: str | None, lat=None, lon=None) -> list[Out]:
+    if c.status != "assigned" or u.id not in (c.reporter_id, c.assigned_to) or not c.assigned_to:
+        u.state = {}
+        return [Out(u.id, "This case is closed, so the chat has ended. Thank you! 💛")]
+    to = c.assigned_to if u.id == c.reporter_id else c.reporter_id
+    who = "👤 Reporter" if u.id == c.reporter_id else "🦸 Rescuer"
+    if lat is not None:
+        body, link = f"{who} (SW-{c.id}) shared a location:", maps_link(lat, lon)
+    else:
+        body, link = (f"{who} (SW-{c.id}): {text}" if text else f"{who} (SW-{c.id}) sent a photo."), None
+    ledger(s, c, "Person", "message", f"{'Reporter' if u.id == c.reporter_id else 'Responder'} sent a message.",
+           public=False)
+    return [Out(to, body, image_url=photo_url(photo_id) if photo_id else None, link=link,
+                buttons=[(f"case:chat:{c.id}", "💬 Reply")])]
+
+
+def clinic_near(lat, lon) -> str:
+    return f"https://www.google.com/maps/search/veterinary+hospital/@{lat:.4f},{lon:.4f},14z"
 
 
 # ------------------------------------------------------------------ RESCUE SOS
@@ -635,7 +736,7 @@ def pick_helpers(s, lat, lon, exclude: set) -> list[str]:
     """Nearby volunteers (8 km), skipping anyone paused or already at the daily cap."""
     out = []
     for dist, h in nearby(s, User, lat, lon, config.HELPER_RADIUS_KM, is_volunteer=True):
-        if h.id in exclude or (h.state or {}).get("paused") or (h.role and h.role != "volunteer"):
+        if h.id in exclude or (h.state or {}).get("paused") or (h.role and h.role != "volunteer") or h.approved is False:
             continue
         if _alerts_today(s, h.id) >= config.MAX_ALERTS_PER_HELPER_PER_DAY:
             continue
@@ -762,7 +863,10 @@ def case_button(s, u: User, b: str) -> list[Out]:
             return [Out(u.id, "Thank you! Someone else is already on the way. 💛")]
         if c.status == "closed":
             return [Out(u.id, "This case is already closed. Thank you! 💛")]
-        c.assigned_to, c.accepted_at, c.status, c.current_helper = u.id, now(), "assigned", u.id
+        picked = c.current_helper != u.id
+        c.assigned_to, c.accepted_at, c.status, c.current_helper, c.queue = u.id, now(), "assigned", u.id, []
+        if picked:
+            ledger(s, c, "Person", "picked", "A helper picked this case from the open-cases list.", public=False)
         mins = (c.accepted_at - c.created).total_seconds() / 60
         team, is_ct = responder_label(s, c, u.id)
         ledger(s, c, "Person", "accepted", f"{'The caretaker' if is_ct else rules.TEAM_LABELS.get(team, team).capitalize()} "
@@ -774,8 +878,45 @@ def case_button(s, u: User, b: str) -> list[Out]:
                                                       (f"case:more:{c.id}", "Need more help"),
                                                       (f"v:case:{c.id}", "🩺 Ask a vet")]),
             Out(u.id, first_aid_text((c.triage or {}).get("first_aid_card", "general"), include_bite_rule=False)),
-            Out(c.reporter_id, f"✅ {who} is on the way! (case SW-{c.id})\nPlease stay at a safe distance until they arrive."),
+            Out(u.id, "💬 Can't find the animal? Message the person who reported it; phone numbers stay private.\n"
+                      "🏥 Animal hospitals near the spot are on this map. Need a vehicle? Ask for transport.",
+                link=clinic_near(c.lat, c.lon),
+                buttons=[(f"case:chat:{c.id}", "💬 Message reporter"), (f"case:transport:{c.id}", "🚐 Need transport")]),
+            Out(c.reporter_id, f"✅ {who} is on the way! (case SW-{c.id})\nPlease stay at a safe distance until they arrive.",
+                buttons=[(f"case:chat:{c.id}", "💬 Message the rescuer")]),
         ]
+    if action == "chat":
+        return case_chat_start(s, u, c)
+    if action == "transport":
+        if c.assigned_to != u.id or c.status != "assigned":
+            return [Out(u.id, "Only the rescuer on this case can ask for transport.")]
+        teams = ["ngo"] + (["municipal_cattle"] if (c.triage or {}).get("species") == "cow" else []) + ["municipal", "coordinator"]
+        demo = is_demo_case(c)
+        ids = []
+        for team in teams:
+            ids += real_only([h.id for d, h in nearby(s, User, c.lat, c.lon, CITY_RADIUS_KM * (3 if team == "coordinator" else 1), role=team)
+                              if h.id != u.id], demo)[:2]
+        ids = list(dict.fromkeys(ids))
+        ledger(s, c, "Person", "transport", f"Rescuer asked for transport. {len(ids)} partner(s) asked.",
+               trace_title="Transport requested")
+        outs = [Out(h, f"🚐 Transport needed: case SW-{c.id} ({LEVEL_WORDS.get(c.level or 'CHECK')}). A rescuer is with "
+                       f"the animal and needs a vehicle to reach a vet.\n{(c.triage or {}).get('summary', '')}",
+                    link=maps_link(c.lat, c.lon), image_url=photo_url(c.photo_id),
+                    buttons=[(f"case:lift:{c.id}", "I can send transport")]) for h in ids]
+        head = f"🚐 I've asked {len(ids)} partner(s) for transport. " if ids else "No transport partner has joined nearby yet. "
+        return [Out(u.id, head + "The government animal ambulance can also carry the animal: call *1962*.")] + outs
+    if action == "lift":
+        if c.status != "assigned" or not c.assigned_to:
+            return [Out(u.id, "Thank you! This case doesn't need transport any more. 💛")]
+        if (c.triage or {}).get("lift_by"):
+            return [Out(u.id, "Thank you! Someone is already sending transport. 💛")]
+        c.triage = {**(c.triage or {}), "lift_by": u.id}
+        team, _ = responder_label(s, c, u.id)
+        ledger(s, c, "Person", "transport_on_way", f"{rules.TEAM_LABELS.get(team, 'A partner').capitalize()} is sending transport.",
+               trace_title="Transport on the way")
+        return [Out(u.id, f"🙏 Thank you! The rescuer on case SW-{c.id} has been told. You can message them here.",
+                    link=maps_link(c.lat, c.lon)),
+                Out(c.assigned_to, f"🚐 A {rules.TEAM_LABELS.get(team, 'partner')} is sending transport for case SW-{c.id}.")]
     if action == "no":
         if c.current_helper != u.id:
             return [Out(u.id, "No problem, thank you. 💛")]
@@ -1304,6 +1445,9 @@ def handle_misc(s, u: User, inc: Incoming) -> list[Out] | None:
         if a:
             a.rabies_vaccinated_on = now().date().isoformat()
             return [Out(u.id, f"💉 Noted! {a.name} is vaccinated. Thank you for keeping everyone safe. 💛")]
+    if st == "volunteer_name" and text and not b and text.lower() not in ("menu", "cancel", "stop"):
+        u.name, u.state = (inc.text or "").strip()[:80], {}
+        return volunteer_join(s, u)
     if st == "volunteer_loc" and inc.lat is not None:
         u.lat, u.lon, u.state = inc.lat, inc.lon, {}
         return volunteer_join(s, u)

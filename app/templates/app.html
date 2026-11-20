@@ -103,6 +103,7 @@
       <div id="myCases"><p class="note" data-i18n="loading">Loading…</p></div>
       <h2 style="font-size:30px;margin-top:6px" data-i18n="help_more">Help more</h2>
       <button class="mini" type="button" id="volBtn" style="font:inherit;text-align:left;cursor:pointer"><div><b data-i18n="vol_title">🦸 Become a volunteer</b><span data-i18n="vol_desc">Get alerts for hurt animals within 8 km. At most 6 a day; pause any time.</span></div></button>
+      <button class="mini" type="button" id="casesBtn" style="font:inherit;text-align:left;cursor:pointer"><div><b data-i18n="oc_title">📋 Open cases near me</b><span data-i18n="oc_desc">For helpers: animals nearby that still need someone</span></div></button>
       <button class="mini" type="button" id="pushBtn2" style="font:inherit;text-align:left;cursor:pointer"><div><b data-i18n="notif_title">🔔 Notifications</b><span id="pushState" data-i18n="notif_off">Turn on alerts for this phone</span></div></button>
       <a class="mini" href="/vet"><div><b data-i18n="vet_title">🩺 Vet care</b><span data-i18n="vet_desc">Talk to a vet online, animal ambulance 1962</span></div></a>
       <a class="mini" href="/city"><div><b data-i18n="city_title">City view</b><span data-i18n="city_desc">Where animals get hurt, rescue times and vaccination near you</span></div></a>
@@ -183,6 +184,11 @@ document.querySelectorAll("[data-vgo]").forEach(b => b.onclick = () => {
   document.querySelector('[data-tab="chat"]').click();
   if (window.swGo) window.swGo(b.dataset.vgo);
 });
+document.getElementById("casesBtn").onclick = () => {
+  document.querySelector('[data-tab="chat"]').click();
+  const t = document.getElementById("text"); t.value = "cases";
+  document.getElementById("composer").requestSubmit();
+};
 document.getElementById("volBtn").onclick = () => {
   document.querySelector('[data-tab="chat"]').click();
   const t = document.getElementById("text"); t.value = "volunteer";

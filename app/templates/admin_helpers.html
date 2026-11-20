@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}New helpers · admin{% endblock %}
+{% block content %}
+<div class="page-head"><h1>New helpers to check</h1><p>Call or meet each person (or ask a partner NGO) before approving. Approved helpers receive animal locations.</p></div>
+<div class="tablewrap"><table class="tbl">
+  <tr><th>Name / group</th><th>Area (about 1 km)</th><th>Joined</th><th></th></tr>
+  {% for h in rows %}<tr><td>{{ h.name or '—' }}</td><td>{% if h.lat %}<a href="https://maps.google.com/?q={{ '%.2f'|format(h.lat) }},{{ '%.2f'|format(h.lon) }}" target="_blank" rel="noopener">{{ '%.2f'|format(h.lat) }}, {{ '%.2f'|format(h.lon) }}</a>{% endif %}</td><td>{{ h.created.strftime('%d %b') }}</td>
+    <td><form method="post" action="/admin/helpers/{{ h.id }}" style="display:flex;gap:8px"><input type="hidden" name="key" value="{{ key }}">
+      <button class="btn small mint" name="on" value="yes">Approve</button><button class="btn small" name="on" value="no">Not now</button></form></td></tr>
+  {% else %}<tr><td colspan="4">No one is waiting.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

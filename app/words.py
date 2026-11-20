@@ -40,6 +40,9 @@ _MENU = ["hi", "hii", "hello", "hey", "namaste", "namaskar", "start", "menu", "c
 _LANGUAGE = ["language", "bhasha", "भाषा", "ভাষা", "மொழி", "భాష"]
 _VOLUNTEER = ["volunteer", "helper", "join", "स्वयंसेवक", "वॉलंटियर", "वालंटियर", "স্বেচ্ছাসেবক", "தன்னார்வ", "వాలంటీర్",
               "స్వచ్ఛంద"]
+_CASES = ["cases", "open cases", "nearby cases", "cases near me", "केस", "केस दिखाओ", "पास के केस", "কেস", "வழக்குகள்",
+          "కేసులు", "केसेस"]
+_STOP_CHAT = ["stop", "end", "bye", "बंद", "खत्म", "বন্ধ", "நிறுத்து", "ఆపు", "थांबा"]
 _PAUSE = ["pause", "रोको", "रुको", "बंद करो", "থামাও", "বিরতি", "நிறுத்து", "ఆపు"]
 _RESUME = ["resume", "फिर शुरू", "चालू करो", "আবার চালু", "மீண்டும்", "మళ్ళీ"]
 _YES_DONE = ["vaccinated", "done", "yes", "haan", "ho gaya", "हाँ", "हां", "हो गया", "लग गया", "होय", "झाले", "হ্যাঁ",
@@ -95,6 +98,14 @@ def is_language(text: str) -> bool:
 
 def is_volunteer(text: str) -> bool:
     return _exact(_VOLUNTEER, text)
+
+
+def wants_cases(text: str) -> bool:
+    return _exact(_CASES, text)
+
+
+def is_stop_chat(text: str) -> bool:
+    return _exact(_STOP_CHAT, text)
 
 
 def is_pause(text: str) -> bool:
