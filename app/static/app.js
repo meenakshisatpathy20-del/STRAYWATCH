@@ -354,7 +354,8 @@
     if (g && GO[g]) await send(GO[g]);
   }
   window.addEventListener("sw-lang", () => setTimeout(runGo, 300));
-  window.swGo = (g) => GO[g] && send(GO[g]);  // used by the app's Vet tab
+  const GO_LABEL = { vet: "vh_talk", food: "vh_food" };  // echo the tapped button in the person's language
+  window.swGo = (g) => GO[g] && send({ ...GO[g], echo: GO_LABEL[g] ? T(GO_LABEL[g], GO[g].echo) : GO[g].echo });  // used by the app's Vet tab
   const seen = new URLSearchParams(location.search).get("seen");
   if (seen) { ensureLang().then(() => send({ text: "SEEN " + seen })); }
   else if (!msgs.children.length) {

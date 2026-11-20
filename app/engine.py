@@ -370,6 +370,9 @@ LOCATION_ASK = ("Got it. Now please share the location 📍 so help can find the
                 "Can't share it? Type a nearby landmark and area, e.g. *Lalpur Chowk, Ranchi*.")
 
 
+LOCATION_AGAIN = "Noted 👍 Now just the location 📍, or type a nearby landmark."
+
+
 def sos_step(s, u: User, text: str, photo_id: str | None, b: str) -> list[Out]:
     d = dict((u.state or {}).get("d", {}))
     if photo_id:
@@ -408,9 +411,10 @@ def sos_step(s, u: User, text: str, photo_id: str | None, b: str) -> list[Out]:
         if u.lat is not None and b == "sos:here":
             d["lat"], d["lon"] = u.lat, u.lon
         else:
+            again = d.get("asked_loc") and text and not photo_id
             d["asked_loc"] = True
             u.state = {"flow": "sos", "d": d}
-            return [Out(u.id, LOCATION_ASK, ask_location=True)]
+            return [Out(u.id, LOCATION_AGAIN if again else LOCATION_ASK, ask_location=True)]
     return create_case(s, u, d)
 
 

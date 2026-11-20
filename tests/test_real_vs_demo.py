@@ -72,3 +72,12 @@ def test_demo_consult_is_offered_the_sample_vet(s, monkeypatch):
     finally:
         config.DEMO_RUN.reset(tok)
     assert "Dr. Sample" in texts(out) + str([o.options or o.buttons for o in out])
+
+
+def test_extra_words_after_the_photo_do_not_repeat_the_long_location_ask(s, monkeypatch):
+    hurt_dog(monkeypatch)
+    talk(s, "web:x", button="lang:en")
+    talk(s, "web:x", button="m:sos")
+    first = talk(s, "web:x", image=photo())
+    again = talk(s, "web:x", text="it is bleeding and not moving")
+    assert engine.LOCATION_ASK in texts(first) and texts(again) == engine.LOCATION_AGAIN
