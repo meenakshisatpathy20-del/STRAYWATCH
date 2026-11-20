@@ -13,7 +13,7 @@ animal is safe. Pet owners and caretakers can also **talk to a verified vet onli
 <p>
 <a href="https://straywatch-0h6w.onrender.com"><img alt="Live site" src="https://img.shields.io/badge/live-straywatch-FFD23F?style=for-the-badge"></a>
 <a href="https://straywatch-0h6w.onrender.com/video"><img alt="Demo video" src="https://img.shields.io/badge/demo-5_min_video-FF8A7A?style=for-the-badge"></a>
-<img alt="Tests" src="https://img.shields.io/badge/tests-96_passing-3BC9A3?style=for-the-badge">
+<img alt="Tests" src="https://img.shields.io/badge/tests-97_passing-3BC9A3?style=for-the-badge">
 <img alt="Languages" src="https://img.shields.io/badge/languages-6-5BC0EB?style=for-the-badge">
 </p>
 
@@ -136,7 +136,7 @@ Code map: `app/rules.py` (urgency rules) · `app/engine.py` (conversations, disp
 | Report → caretaker alerted | ~10 s on the free live server |
 | Camera agent | Alert for dogs lying on a road; 0 alerts for healthy cows walking on real road video; ~35 ms per frame on a 4-core CPU |
 | Two-city load test (1,238 reports) | Every case got a responder; 0 alerts beyond 8 km or to the wrong city; daily cap held |
-| Automated tests | 96, run in GitHub Actions |
+| Automated tests | 97, run in GitHub Actions |
 
 Honest limits: the responder teams and vets on the live site are **samples** until real partners join (bookings with a
 sample vet are clearly marked as demo bookings); food orders are confirmed by phone and paid on delivery, with no online
