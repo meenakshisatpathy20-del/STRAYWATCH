@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Food &amp; nutrition · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">good food is good medicine</div>
+  <h1>Food &amp; nutrition</h1>
+  <p>Food for dogs, cats and cows, plus feeding packs for street animals. We call you to confirm before delivery, and you <b>pay on delivery</b>. Free delivery from ₹{{ free_from }}.</p>
+</div>
+
+<div class="shop">
+  <div>
+    <div class="chips" role="group" aria-label="Show products for">
+      {% for k, label in animals %}<button type="button" class="chip{% if k == pick %} on{% endif %}" data-a="{{ k }}">{{ label }}</button>{% endfor %}
+    </div>
+    <div class="prods" id="prods">
+      {% for p in products %}
+      <article class="card prod" data-animal="{{ p[1] }}" data-id="{{ p[0] }}">
+        <span class="pe" aria-hidden="true">{{ p[5] }}</span>
+        <b class="display pname">{{ p[2] }}</b>
+        <span class="note">{{ p[3] }}{% if p[1] == 'stray' %} · for street dogs{% endif %}</span>
+        <p class="pdesc">{{ p[6] }}</p>
+        <div class="prow"><b class="price">₹{{ p[4] }}</b>
+          <div class="qty" data-qty="{{ p[0] }}">
+            <button type="button" class="btn sun small add" data-add="{{ p[0] }}">Add</button>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    <p class="note" style="margin-top:14px">Prices are indicative pilot prices for generic, good-quality products. Not sure what to feed? Ask “Can I feed this?” in the <a href="/app?go=food" data-chat="food">chat</a>, or <a href="/vet/book">book a vet</a>. A sick animal needs a vet, not just better food.</p>
+  </div>
+
+  <aside class="cart card" id="cart" aria-label="Your cart">
+    <h2 style="font-size:26px">🛒 Your cart</h2>
+    <div id="cartItems"><p class="note">Your cart is empty. Tap <b>Add</b> on a product.</p></div>
+    <div id="cartTotals"></div>
+    <form id="checkout" class="checkout" hidden>
+      <label class="check"><input type="checkbox" id="forStrays"> 💛 Deliver to a volunteer feeder near my PIN code, for street animals</label>
+      <label>Your name<input id="cName" required maxlength="60" autocomplete="name"></label>
+      <label>Phone (10 digits)<input id="cPhone" required inputmode="numeric" maxlength="15" autocomplete="tel"></label>
+      <label id="addrWrap">Delivery address<textarea id="cAddr" rows="2" maxlength="400" autocomplete="street-address"></textarea></label>
+      <label>PIN code<input id="cPin" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="postal-code" placeholder="834001"></label>
+      <p class="err" id="cErr" role="alert" hidden></p>
+      <button class="btn coral big" type="submit" id="placeBtn" style="width:100%">Place order · pay on delivery</button>
+      <p class="note">We call to confirm before anything is sent. Your number is used only for this order.</p>
+    </form>
+  </aside>
+</div>
+<a class="cartbar" id="cartbar" href="#cart" hidden><span id="cartbarText">Cart</span><b>View cart →</b></a>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const P = {{ products|tojson }}, BY = Object.fromEntries(P.map(p => [p[0], p])), FREE = {{ free_from }}, FEE = {{ fee }};
+  const KEY = "sw_cart";
+  let cart = {}; try { cart = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { cart = {}; }
+  for (const k of Object.keys(cart)) if (!BY[k]) delete cart[k];
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch (e) {} };
+  const $ = (s) => document.querySelector(s);
+
+  function setQty(id, q) { q = Math.max(0, Math.min(10, q)); if (q) cart[id] = q; else delete cart[id]; save(); render(); }
+  function render() {
+    document.querySelectorAll("[data-qty]").forEach(box => {
+      const id = box.dataset.qty, q = cart[id] || 0;
+      box.innerHTML = q
+        ? `<button type="button" class="qb" data-dec="${id}" aria-label="One less">−</button><b aria-live="polite">${q}</b><button type="button" class="qb" data-inc="${id}" aria-label="One more">+</button>`
+        : `<button type="button" class="btn sun small add" data-add="${id}">Add</button>`;
+    });
+    const ids = Object.keys(cart), sub = ids.reduce((a, id) => a + BY[id][4] * cart[id], 0);
+    const del = !ids.length || sub >= FREE ? 0 : FEE, n = ids.reduce((a, id) => a + cart[id], 0);
+    $("#cartItems").innerHTML = ids.length ? ids.map(id => `<div class="ci"><span>${BY[id][5]} ${BY[id][2]} <small>× ${cart[id]}</small></span><b>₹${BY[id][4] * cart[id]}</b></div>`).join("")
+      : '<p class="note">Your cart is empty. Tap <b>Add</b> on a product.</p>';
+    $("#cartTotals").innerHTML = ids.length ? `<div class="ci"><span>Delivery${del ? ` <small>(free from ₹${FREE})</small>` : ""}</span><b>${del ? "₹" + del : "Free"}</b></div><div class="ci total"><span>Total</span><b>₹${sub + del}</b></div>` : "";
+    $("#checkout").hidden = !ids.length;
+    $("#cartbar").hidden = !ids.length;
+    $("#cartbarText").textContent = `${n} item${n === 1 ? "" : "s"} · ₹${sub + del}`;
+    const pack = !!cart["p-feedpack"]; if (pack) $("#forStrays").checked = true;
+    $("#addrWrap").hidden = $("#forStrays").checked;
+  }
+  document.addEventListener("click", e => {
+    const t = e.target.closest("[data-add],[data-inc],[data-dec]"); if (!t) return;
+    if (t.dataset.add) setQty(t.dataset.add, 1); else if (t.dataset.inc) setQty(t.dataset.inc, (cart[t.dataset.inc] || 0) + 1); else setQty(t.dataset.dec, (cart[t.dataset.dec] || 0) - 1);
+  });
+  $("#forStrays").onchange = render;
+  function filter(a) {
+    document.querySelectorAll("[data-a]").forEach(c => c.classList.toggle("on", c.dataset.a === a));
+    document.querySelectorAll(".prod[data-animal]").forEach(p => p.hidden = !(a === "all" || p.dataset.animal === a || (p.dataset.animal === "all" && a !== "stray")));
+  }
+  document.querySelectorAll("[data-a]").forEach(c => c.onclick = () => { filter(c.dataset.a); history.replaceState(null, "", "?a=" + c.dataset.a); });
+  filter({{ pick|tojson }});
+  $("#checkout").onsubmit = async (e) => {
+    e.preventDefault(); const err = $("#cErr"); err.hidden = true;
+    const body = { cart, name: $("#cName").value, phone: $("#cPhone").value, address: $("#cAddr").value, pincode: $("#cPin").value.trim(), for_strays: $("#forStrays").checked };
+    if (!/^\d{6}$/.test(body.pincode)) { err.textContent = "Please enter a 6-digit PIN code."; err.hidden = false; return; }
+    if (body.phone.replace(/\D/g, "").length < 10) { err.textContent = "Please enter a 10-digit phone number."; err.hidden = false; return; }
+    if (!body.for_strays && !body.address.trim()) { err.textContent = "Please add the delivery address."; err.hidden = false; return; }
+    const b = $("#placeBtn"); b.disabled = true; b.textContent = "Placing order…";
+    try {
+      const r = await fetch("/api/shop/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.detail || "Something went wrong");
+      cart = {}; save(); location.href = j.url;
+    } catch (x) { err.textContent = x.message || "Couldn't place the order. Please try again."; err.hidden = false; b.disabled = false; b.textContent = "Place order · pay on delivery"; }
+  };
+  render();
+})();
+</script>
+{% endblock %}

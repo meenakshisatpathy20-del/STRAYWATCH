@@ -141,7 +141,9 @@ def start(s, u: User, who: str = "", animal_id: int | None = None) -> list:
            [(f"v:who:a:{a.id}", f"💛 {a.name}") for a in mine]
     u.state = {"flow": "vet", "d": {}}
     return [_out(u.id, "🩺 *Talk to a vet*\nI'll ask a few quick questions so the vet can help faster. "
-                       "Who is this for?", options=opts)]
+                       "Who is this for?", options=opts),
+            _out(u.id, "Prefer a fixed time, or a clinic visit? Book an appointment here:",
+                 link=f"{config.PUBLIC_BASE_URL}/vet/book")]
 
 
 def _pick_who(s, u: User, who: str, animal_id: int | None = None) -> list:
@@ -449,7 +451,8 @@ def food_answer(s, u: User, text: str) -> list:
             v = f["verdict"].get(sp) or f["verdict"].get("dog" if sp == "puppy" else sp)
             if v not in ("safe", "limit", "avoid"):
                 break
-            return [_out(u.id, food_text(f, v), buttons=[("v:start", "🩺 Talk to a vet"), ("menu", "Menu")])]
+            return [_out(u.id, food_text(f, v), buttons=[("v:start", "🩺 Talk to a vet"), ("menu", "Menu")],
+                         link=f"{config.PUBLIC_BASE_URL}/shop")]
     return [_out(u.id, "I don't have that food in my reviewed list, so I won't guess. 🙏 Please ask a vet.",
                  buttons=[("v:start", "🩺 Talk to a vet"), ("menu", "Menu")])]
 

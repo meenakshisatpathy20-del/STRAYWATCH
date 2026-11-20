@@ -254,6 +254,44 @@ class PushSub(Base):
     created: Mapped[datetime] = mapped_column(DateTime, default=now)
 
 
+class Booking(Base):
+    """An appointment with a verified vet: a video consult or a clinic visit, in a 30-minute slot."""
+    __tablename__ = "bookings"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(12), unique=True)          # shown to the owner, e.g. BK-7Q2M
+    vet_id: Mapped[int] = mapped_column(Integer, index=True)
+    user_id: Mapped[str] = mapped_column(String(80), index=True)
+    mode: Mapped[str] = mapped_column(String(8))                        # video | clinic
+    day: Mapped[str] = mapped_column(String(10))                        # YYYY-MM-DD (India time)
+    slot: Mapped[str] = mapped_column(String(5))                        # HH:MM
+    who: Mapped[str] = mapped_column(String(10), default="pet")         # pet | stray
+    species: Mapped[str] = mapped_column(String(20))
+    pet_name: Mapped[str | None] = mapped_column(String(40))
+    problem: Mapped[str] = mapped_column(Text)
+    owner_name: Mapped[str] = mapped_column(String(60))
+    phone: Mapped[str] = mapped_column(String(20))                      # private: only the vet sees it
+    status: Mapped[str] = mapped_column(String(10), default="booked")   # booked | cancelled
+    room: Mapped[str | None] = mapped_column(String(80))                # video link room for video consults
+    created: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
+class Order(Base):
+    """A food order: confirmed by phone, paid on delivery. Can be sent to a street-animal feeder instead of home."""
+    __tablename__ = "orders"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(12), unique=True)
+    user_id: Mapped[str] = mapped_column(String(80), index=True)
+    items: Mapped[list] = mapped_column(JSON, default=list)             # [{id, name, qty, price}]
+    total: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(60))
+    phone: Mapped[str] = mapped_column(String(20))
+    address: Mapped[str] = mapped_column(Text)
+    pincode: Mapped[str] = mapped_column(String(6))
+    for_strays: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[str] = mapped_column(String(12), default="placed")   # placed | confirmed | delivered | cancelled
+    created: Mapped[datetime] = mapped_column(DateTime, default=now)
+
+
 class Setting(Base):
     """Small server settings that must survive restarts (e.g. the Web Push signing key)."""
     __tablename__ = "settings"

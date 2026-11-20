@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Book a vet · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">video consult or clinic visit</div>
+  <h1>Book a vet</h1>
+  <p>Pick a vet, a day and a time. The vet sees your short summary before you meet. You can cancel from your booking page anytime.</p>
+</div>
+{% if not vets %}
+<div class="card"><p>No verified vet has joined yet. Please <a href="/app?go=vet" data-chat="vet">start a chat consult</a> instead, or call <b>1962</b> in an emergency.</p></div>
+{% else %}
+<form class="book" method="post" action="/vet/book" id="bookForm">
+  <div class="step card">
+    <h2><span class="n">1</span> Choose a vet</h2>
+    <div class="pick-vets">
+      {% for v in vets %}
+      <label class="pick-vet">
+        <input type="radio" name="vet" value="{{ v.id }}" {% if chosen and v.id == chosen.id %}checked{% endif %} data-sample="{{ 1 if v.sample else 0 }}" data-name="{{ v.name }}" data-fee="{{ v.fee }}" data-strays="{{ 1 if v.free_for_strays else 0 }}">
+        <span><b>{{ v.name }}</b>{% if v.sample %} <em class="tagmini">sample</em>{% endif %}<br>
+          <small>{{ v.clinic or 'Online consults' }} · {{ v.langs|join(', ') }} · {{ 'Free' if v.fee == 0 else '₹' ~ v.fee }} for pets{% if v.free_for_strays %}, free for strays{% endif %}</small></span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="step card">
+    <h2><span class="n">2</span> Video or clinic?</h2>
+    <div class="seg" role="radiogroup" aria-label="Consult type">
+      {% for k, label in modes.items() %}
+      <label><input type="radio" name="mode" value="{{ k }}" {% if k == mode %}checked{% endif %}><span>{{ '🎥' if k == 'video' else '🏥' }} {{ label }}</span></label>
+      {% endfor %}
+    </div>
+    <p class="note" id="modeNote"></p>
+  </div>
+
+  <div class="step card">
+    <h2><span class="n">3</span> Pick a day and time</h2>
+    <div class="days" role="radiogroup" aria-label="Day">
+      {% for d, label in days %}
+      <label><input type="radio" name="day" value="{{ d }}" {% if loop.first %}checked{% endif %}><span>{{ label }}</span></label>
+      {% endfor %}
+    </div>
+    <div class="slots" id="slots" role="radiogroup" aria-label="Time" aria-live="polite"><p class="note">Loading times…</p></div>
+  </div>
+
+  <div class="step card">
+    <h2><span class="n">4</span> About the animal</h2>
+    <div class="form">
+      <div class="seg wide" role="radiogroup" aria-label="Whose animal">
+        <label><input type="radio" name="who" value="pet" checked><span>🏠 My pet</span></label>
+        <label><input type="radio" name="who" value="stray"><span>🐾 A street animal I look after</span></label>
+      </div>
+      <label>Animal<select name="species">{% for k, l in species.items() %}<option value="{{ k }}">{{ l }}</option>{% endfor %}</select></label>
+      <label>Name (if any)<input name="pet_name" maxlength="40" placeholder="e.g. Bruno"></label>
+      <label class="wide">What's the problem?<textarea name="problem" required maxlength="600" rows="3" placeholder="e.g. Not eating for 2 days, vomiting once. 4-month-old puppy. Or: due for the second vaccine."></textarea></label>
+    </div>
+  </div>
+
+  <div class="step card">
+    <h2><span class="n">5</span> Your details</h2>
+    <div class="form">
+      <label>Your name<input name="owner_name" required maxlength="60" autocomplete="name"></label>
+      <label>Phone (10 digits)<input name="phone" required inputmode="numeric" pattern="[0-9 +\-]{10,15}" maxlength="15" autocomplete="tel" placeholder="98xxxxxxxx"></label>
+      <label class="wide check"><input type="checkbox" name="consent" value="yes" required> Share my name, phone and this summary with the vet for this appointment only (DPDP 2023). For an emergency I'll call 1962 instead of waiting.</label>
+    </div>
+  </div>
+
+  <div class="book-bar card">
+    <div id="summary" aria-live="polite"><b>Choose a time</b></div>
+    <button class="btn coral big" type="submit" id="bookBtn" disabled>Confirm booking</button>
+  </div>
+  <p class="note" id="sampleNote" hidden>⚠️ This is a <b>sample vet</b> for the prototype: this will be a demo booking, not a real appointment.</p>
+</form>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  const f = document.getElementById("bookForm"); if (!f) return;
+  const slotsEl = document.getElementById("slots"), sum = document.getElementById("summary"), btn = document.getElementById("bookBtn");
+  const val = (n) => (f.querySelector(`[name="${n}"]:checked`) || {}).value;
+  const nice = (t) => { const [h, m] = t.split(":").map(Number); return `${(h + 11) % 12 + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+  async function loadSlots() {
+    slotsEl.innerHTML = '<p class="note">Loading times…</p>'; update();
+    try {
+      const r = await fetch(`/api/vet/slots?vet=${val("vet")}&day=${val("day")}`); const j = await r.json();
+      if (!j.slots.length) { slotsEl.innerHTML = '<p class="note">No free times on this day. Please pick another day.</p>'; return update(); }
+      slotsEl.innerHTML = j.all.map(t => j.slots.includes(t)
+        ? `<label><input type="radio" name="slot" value="${t}"><span>${nice(t)}</span></label>`
+        : `<label class="off"><input type="radio" disabled><span>${nice(t)}</span></label>`).join("");
+    } catch (e) { slotsEl.innerHTML = '<p class="note">Couldn\'t load times. Check your network and pick the day again.</p>'; }
+    update();
+  }
+  function update() {
+    const v = f.querySelector('[name="vet"]:checked'), slot = val("slot"), mode = val("mode"), day = f.querySelector('[name="day"]:checked');
+    document.getElementById("sampleNote").hidden = !(v && v.dataset.sample === "1");
+    document.getElementById("modeNote").textContent = mode === "video"
+      ? "You'll get a video link on your booking page. Works in the phone browser, no app needed."
+      : "Visit the vet's clinic at this time. The clinic address is on the vet's card and your booking page.";
+    const stray = val("who") === "stray", fee = v ? Number(v.dataset.fee) : 0;
+    const cost = (stray && v && v.dataset.strays === "1") || fee === 0 ? "Free" : `₹${fee}, pay the vet`;
+    btn.disabled = !slot;
+    sum.innerHTML = slot ? `<b>${v.dataset.name}</b><br>${mode === "video" ? "🎥 Video consult" : "🏥 Clinic visit"} · ${day.nextElementSibling.textContent}, ${nice(slot)} · ${cost}` : "<b>Choose a time</b>";
+  }
+  f.addEventListener("change", (e) => { if (["vet", "day"].includes(e.target.name)) loadSlots(); else update(); });
+  f.addEventListener("submit", () => { btn.disabled = true; btn.textContent = "Booking…"; });
+  loadSlots();
+})();
+</script>
+{% endblock %}

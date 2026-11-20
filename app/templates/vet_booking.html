@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Booking {{ b.code }} · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">{{ 'booking cancelled' if b.status == 'cancelled' else 'you are booked' }}</div>
+  <h1>{{ modes[b.mode] }}</h1>
+  <p>Booking code <b class="display" style="font-size:22px">{{ b.code }}</b></p>
+</div>
+<div class="grid2-book">
+  <div class="card ticket {{ 'cancelled' if b.status == 'cancelled' else '' }}">
+    {% if b.status == 'cancelled' %}<p class="pill HIGH" style="margin:0 0 10px">Cancelled</p>{% else %}<p class="pill LOW" style="margin:0 0 10px">✅ Confirmed</p>{% endif %}
+    <h2 style="font-size:30px">{{ when }}</h2>
+    <p style="font-size:18px;margin:6px 0">with <b>{{ v.name if v else 'your vet' }}</b>{% if v and v.sample %} <span class="pill" style="background:#eee">sample vet: demo booking</span>{% endif %}</p>
+    {% if v %}<p class="note" style="margin:0">{{ v.qualification or '' }} · {{ v.clinic or 'Online consults' }} · speaks {{ v.langs|join(', ') }}</p>{% endif %}
+    <hr class="dash">
+    <p><b>Animal:</b> {{ species[b.species] }}{% if b.pet_name %} · {{ b.pet_name }}{% endif %} ({{ 'street animal' if b.who == 'stray' else 'pet' }})</p>
+    <p><b>Problem:</b> {{ b.problem }}</p>
+    {% if mine %}<p><b>Booked by:</b> {{ b.owner_name }} · {{ b.phone[:2] }}xxxxxx{{ b.phone[-2:] }}</p>{% endif %}
+    {% if b.status == 'booked' %}
+      {% if b.mode == 'video' %}
+      <a class="btn mint big" href="https://meet.jit.si/{{ b.room }}" target="_blank" rel="noopener" style="width:100%">🎥 Join the video call</a>
+      <p class="note">Open this at the booked time. The vet joins the same link. Works in your phone browser.</p>
+      {% else %}
+      <p class="note">Please reach the clinic 5 minutes early and show this booking code: <b>{{ b.code }}</b>.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+  <div class="card">
+    <h3>Before you meet</h3>
+    <ul class="ticks">
+      <li>Keep a recent photo or a short video of the problem ready.</li>
+      <li>Note when it started, what the animal ate, and any vaccines given.</li>
+      <li>Getting worse? Trouble breathing, fits, bleeding or bloat: <b>call 1962</b> now, don't wait.</li>
+    </ul>
+    <div class="row2" style="margin-top:12px">
+      <a class="btn small" href="/app?go=vet" data-chat="vet">💬 Chat with a vet now</a>
+      <a class="btn small" href="/shop">🛒 Food &amp; nutrition</a>
+    </div>
+    {% if mine and b.status == 'booked' %}
+    <form method="post" action="/vet/booking/{{ b.code }}/cancel" style="margin-top:16px" onsubmit="return confirm('Cancel this booking?')">
+      <button class="btn small coral" type="submit">Cancel booking</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -15,9 +15,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 
-from . import config, engine, push
+from . import care, config, engine, push
 from .channels import whatsapp
-from .db import (Animal, Case, CaseEvent, CheckIn, Consult, LostPost, Outbox, PartnerLead, Photo, SessionLocal, Sighting,
+from .db import (Animal, Booking, Case, CaseEvent, CheckIn, Consult, LostPost, Order, Outbox, PartnerLead, Photo,
+                 SessionLocal, Sighting,
                  Trace, User, VetProfile, init_db)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -193,10 +194,166 @@ def lost_page(request: Request):
 @app.get("/vet", response_class=HTMLResponse)
 def vet_page(request: Request, joined: str = ""):
     with SessionLocal() as s:
-        online = list(s.scalars(select(VetProfile).where(VetProfile.verified.is_(True), VetProfile.online.is_(True),
-                                                         VetProfile.user_id.is_not(None)).order_by(VetProfile.fee)))
+        vets = list(s.scalars(select(VetProfile).where(VetProfile.verified.is_(True)).order_by(
+            VetProfile.online.desc(), VetProfile.sample, VetProfile.fee)))
+        online = [v for v in vets if v.online and v.user_id]
         j = s.scalars(select(VetProfile).where(VetProfile.code == joined.upper())).first() if joined else None
-        return page(request, "vet.html", "/vet", online=online, joined=j)
+        return page(request, "vet.html", "/vet", vets=vets, online=online, joined=j, vaccines=care.VACCINES,
+                    products=care.PRODUCTS[:4])
+
+
+# ------------------------------------------------------------------ vet appointments
+
+def _bookable_vets(s):
+    return list(s.scalars(select(VetProfile).where(VetProfile.verified.is_(True)).order_by(
+        VetProfile.sample, VetProfile.fee, VetProfile.id)))
+
+
+def _taken(s, vet_id: int, day: str) -> set[str]:
+    return set(s.scalars(select(Booking.slot).where(Booking.vet_id == vet_id, Booking.day == day,
+                                                    Booking.status == "booked")))
+
+
+@app.get("/vet/book", response_class=HTMLResponse)
+def vet_book_page(request: Request, vet: int = 0, mode: str = "video"):
+    with SessionLocal() as s:
+        vets = _bookable_vets(s)
+        chosen = next((v for v in vets if v.id == vet), vets[0] if vets else None)
+        return page(request, "vet_book.html", "/vet/book", vets=vets, chosen=chosen, days=care.open_days(),
+                    mode=mode if mode in care.MODES else "video", modes=care.MODES, species=care.SPECIES)
+
+
+@app.get("/api/vet/slots")
+def vet_slots(vet: int, day: str):
+    with SessionLocal() as s:
+        v = s.get(VetProfile, vet)
+        if not v or not v.verified or day not in {d for d, _ in care.open_days()}:
+            raise HTTPException(404)
+        return {"slots": care.free_slots(day, _taken(s, vet, day)), "all": care.SLOT_TIMES}
+
+
+@app.post("/vet/book")
+def vet_book(request: Request, vet: int = Form(...), mode: str = Form(...), day: str = Form(...), slot: str = Form(...),
+             who: str = Form("pet"), species: str = Form("dog"), pet_name: str = Form(""), problem: str = Form(...),
+             owner_name: str = Form(...), phone: str = Form(...), consent: str = Form("")):
+    from fastapi.responses import RedirectResponse
+    digits = "".join(ch for ch in phone if ch.isdigit())[-10:]
+    if consent != "yes" or len(digits) != 10 or not problem.strip() or not owner_name.strip():
+        raise HTTPException(400, "Please fill in your name, a 10-digit phone number and the problem, and tick consent.")
+    if mode not in care.MODES or species not in care.SPECIES:
+        raise HTTPException(400, "Unknown consult type or animal.")
+    resp = RedirectResponse("/vet/book", status_code=303)
+    me = _web_user(request, resp)
+    with _lock, SessionLocal() as s:
+        v = s.get(VetProfile, vet)
+        if not v or not v.verified or day not in {d for d, _ in care.open_days()}:
+            raise HTTPException(404)
+        if slot not in care.free_slots(day, _taken(s, vet, day)):
+            raise HTTPException(409, "Sorry, that time was just taken. Please go back and pick another slot.")
+        b = Booking(code=care.code("BK"), vet_id=v.id, user_id=me, mode=mode, day=day, slot=slot,
+                    who="stray" if who == "stray" else "pet", species=species, pet_name=pet_name.strip()[:40] or None,
+                    problem=problem.strip()[:600], owner_name=owner_name.strip()[:60], phone=digits,
+                    room=("StrayWatch-" + secrets.token_urlsafe(9).replace("_", "").replace("-", "")) if mode == "video" else None)
+        s.add(b)
+        s.flush()
+        when, what = care.nice_slot(day, slot), care.MODES[mode].lower()
+        outs = [engine.Out(me, f"✅ Booked: a {what} with {v.name} on *{when}* (booking {b.code}). "
+                               "Your booking page has the details" + (" and the video link." if mode == "video" else "."),
+                           link=f"{config.PUBLIC_BASE_URL}/vet/booking/{b.code}")]
+        if v.user_id and not v.sample:
+            outs.append(engine.Out(v.user_id, f"📅 New booking {b.code}: {what} on *{when}*.\n"
+                                              f"{care.SPECIES[species]}{' ' + b.pet_name if b.pet_name else ''} "
+                                              f"({'street animal' if b.who == 'stray' else 'pet'}): {b.problem}\n"
+                                              f"Owner: {b.owner_name}, {b.phone}",
+                                   link=f"{config.PUBLIC_BASE_URL}/vet/booking/{b.code}"))
+        deliver(s, outs)
+        s.commit()
+        resp.headers["location"] = f"/vet/booking/{b.code}"
+    return resp
+
+
+@app.get("/vet/booking/{code}", response_class=HTMLResponse)
+def vet_booking_page(request: Request, code: str):
+    with SessionLocal() as s:
+        b = s.scalars(select(Booking).where(Booking.code == code.upper())).first()
+        if not b:
+            raise HTTPException(404)
+        v = s.get(VetProfile, b.vet_id)
+        mine = request.cookies.get("sw") and b.user_id == "web:" + request.cookies.get("sw")
+        return page(request, "vet_booking.html", "/vet/book", b=b, v=v, mine=mine, when=care.nice_slot(b.day, b.slot),
+                    modes=care.MODES, species=care.SPECIES)
+
+
+@app.post("/vet/booking/{code}/cancel")
+def vet_booking_cancel(request: Request, code: str):
+    from fastapi.responses import RedirectResponse
+    with _lock, SessionLocal() as s:
+        b = s.scalars(select(Booking).where(Booking.code == code.upper())).first()
+        if not b or b.user_id != "web:" + (request.cookies.get("sw") or ""):
+            raise HTTPException(404)
+        if b.status == "booked":
+            b.status = "cancelled"
+            v = s.get(VetProfile, b.vet_id)
+            if v and v.user_id and not v.sample:
+                deliver(s, [engine.Out(v.user_id, f"❌ Booking {b.code} ({care.nice_slot(b.day, b.slot)}) was cancelled "
+                                                  "by the owner. The slot is free again.")])
+            s.commit()
+    return RedirectResponse(f"/vet/booking/{code.upper()}", status_code=303)
+
+
+# ------------------------------------------------------------------ nutrition shop
+
+@app.get("/shop", response_class=HTMLResponse)
+def shop_page(request: Request, a: str = "all"):
+    return page(request, "shop.html", "/shop", products=care.PRODUCTS, animals=care.ANIMALS,
+                pick=a if a in dict(care.ANIMALS) else "all", free_from=care.DELIVERY_FREE_FROM, fee=care.DELIVERY_FEE)
+
+
+@app.post("/api/shop/order")
+async def shop_order(request: Request, response: Response):
+    body = await request.json()
+    items, delivery, total = care.price_cart(body.get("cart") or {})
+    name, phone = str(body.get("name", "")).strip()[:60], "".join(ch for ch in str(body.get("phone", "")) if ch.isdigit())[-10:]
+    address, pin = str(body.get("address", "")).strip()[:400], str(body.get("pincode", "")).strip()
+    for_strays = bool(body.get("for_strays")) or any(i["id"] == "p-feedpack" for i in items)
+    if not items:
+        raise HTTPException(400, "Your cart is empty.")
+    if not name or len(phone) != 10 or not (len(pin) == 6 and pin.isdigit()) or (not address and not for_strays):
+        raise HTTPException(400, "Please add your name, a 10-digit phone number, a 6-digit PIN code and the address.")
+    me = _web_user(request, response)
+    with _lock, SessionLocal() as s:
+        o = Order(code=care.code("OD"), user_id=me, items=items + ([{"id": "delivery", "name": "Delivery", "qty": 1,
+                                                                      "price": delivery}] if delivery else []),
+                  total=total, name=name, phone=phone, address=address or "Deliver to a volunteer feeder near this PIN",
+                  pincode=pin, for_strays=for_strays)
+        s.add(o)
+        s.flush()
+        deliver(s, [engine.Out(me, f"🛒 Order {o.code} placed: ₹{total}, pay on delivery. We'll call you on your number "
+                                   "to confirm before anything is sent.", link=f"{config.PUBLIC_BASE_URL}/shop/order/{o.code}")])
+        s.commit()
+        return {"code": o.code, "url": f"/shop/order/{o.code}"}
+
+
+@app.get("/shop/order/{code}", response_class=HTMLResponse)
+def shop_order_page(request: Request, code: str):
+    with SessionLocal() as s:
+        o = s.scalars(select(Order).where(Order.code == code.upper())).first()
+        if not o:
+            raise HTTPException(404)
+        mine = bool(request.cookies.get("sw")) and o.user_id == "web:" + request.cookies.get("sw")
+        return page(request, "shop_order.html", "/shop", o=o, mine=mine)
+
+
+@app.get("/admin/orders", response_class=HTMLResponse)
+def admin_orders(request: Request, key: str = ""):
+    """Orders and vet bookings to confirm by phone. Needs SW_ADMIN_KEY."""
+    if not config.ADMIN_KEY or not secrets.compare_digest(key, config.ADMIN_KEY):
+        raise HTTPException(404)
+    with SessionLocal() as s:
+        orders = list(s.scalars(select(Order).order_by(Order.id.desc()).limit(200)))
+        bookings = list(s.scalars(select(Booking).order_by(Booking.id.desc()).limit(200)))
+        vets = {v.id: v.name for v in s.scalars(select(VetProfile))}
+        return page(request, "admin_orders.html", None, orders=orders, bookings=bookings, vets=vets)
 
 
 @app.post("/vet/join")

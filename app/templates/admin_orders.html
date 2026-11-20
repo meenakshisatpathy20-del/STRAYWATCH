@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Orders &amp; bookings · admin{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Orders &amp; bookings</h1><p>Call each person to confirm. Phone numbers here are private.</p></div>
+<section>
+  <h2>Food orders ({{ orders|length }})</h2>
+  <div class="tablewrap"><table class="tbl">
+    <tr><th>Code</th><th>When</th><th>Items</th><th>Total</th><th>Name / phone</th><th>Address</th><th>Status</th></tr>
+    {% for o in orders %}<tr><td><a href="/shop/order/{{ o.code }}">{{ o.code }}</a></td><td>{{ o.created.strftime('%d %b %H:%M') }}</td>
+      <td>{% for i in o.items %}{{ i.name }} ×{{ i.qty }}<br>{% endfor %}</td><td>₹{{ o.total }}</td><td>{{ o.name }}<br>{{ o.phone }}</td>
+      <td>{{ o.address }} · {{ o.pincode }}{% if o.for_strays %} 💛 strays{% endif %}</td><td>{{ o.status }}</td></tr>
+    {% else %}<tr><td colspan="7">No orders yet.</td></tr>{% endfor %}
+  </table></div>
+</section>
+<section>
+  <h2>Vet bookings ({{ bookings|length }})</h2>
+  <div class="tablewrap"><table class="tbl">
+    <tr><th>Code</th><th>Slot</th><th>Vet</th><th>Type</th><th>Animal / problem</th><th>Owner</th><th>Status</th></tr>
+    {% for b in bookings %}<tr><td><a href="/vet/booking/{{ b.code }}">{{ b.code }}</a></td><td>{{ b.day }} {{ b.slot }}</td><td>{{ vets.get(b.vet_id, '?') }}</td>
+      <td>{{ b.mode }}</td><td>{{ b.species }}{% if b.pet_name %} ({{ b.pet_name }}){% endif %}: {{ b.problem }}</td><td>{{ b.owner_name }}<br>{{ b.phone }}</td><td>{{ b.status }}</td></tr>
+    {% else %}<tr><td colspan="7">No bookings yet.</td></tr>{% endfor %}
+  </table></div>
+</section>
+{% endblock %}

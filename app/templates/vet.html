@@ -4,53 +4,129 @@
 <div class="page-head">
   <div class="hand">a vet for every animal</div>
   <h1>Vet care</h1>
-  <p>Talk to a verified vet online, for your pet or for a street animal you look after. Tell StrayWatch what's wrong in your own language; it prepares a short summary for the vet, shows safe first steps, and sends emergencies to a clinic first.</p>
+  <p>Talk to a verified vet online, book a video consult or a clinic visit, check vaccinations, and order the right food for your pet or a street animal you look after.</p>
 </div>
 
-<div class="grid3">
-  <div class="card" style="box-shadow:5px 5px 0 var(--mint)">
-    <h3 style="font-size:24px">🩺 Talk to a vet</h3>
-    <p>Photo + a few words → a verified vet joins the chat. Video call if needed.</p>
-    <a class="btn mint big" href="/app?go=vet" data-chat="vet" style="width:100%">Start a consult</a>
-    <p class="note" style="margin-top:8px">{{ online|length }} vet{{ '' if online|length == 1 else 's' }} online now · free for street animals · free during the pilot</p>
+<!-- Poster banners -->
+<section class="banners" aria-roledescription="carousel" aria-label="Vet care posters">
+  <div class="banner-track" id="bTrack">
+    <article class="banner b-sun" aria-label="1 of 4">
+      <div><span class="kicker">Talk to a vet in minutes</span>
+        <h2>Is your pet unwell?<br>A vet is a chat away.</h2>
+        <p>Photo + a few words, in your language. A verified vet joins the chat, with a video call if needed.</p>
+        <a class="btn coral big" href="/app?go=vet" data-chat="vet">🩺 Start a consult</a></div>
+      <div class="banner-art" aria-hidden="true">{{ d.dog(120) }}<span class="bubble-art">“He's not eating since yesterday…”</span></div>
+    </article>
+    <article class="banner b-mint" aria-label="2 of 4">
+      <div><span class="kicker">Vaccinate on time</span>
+        <h2>Puppy at 6–8 weeks?<br>Time for the first vaccine.</h2>
+        <p>Anti-rabies from 3 months. Cows: FMD every 6 months, free at government camps.</p>
+        <a class="btn big" href="#vaccines">💉 See the schedule</a></div>
+      <div class="banner-art" aria-hidden="true">{{ d.cat(100) }}{{ d.cow(110) }}</div>
+    </article>
+    <article class="banner b-sky" aria-label="3 of 4">
+      <div><span class="kicker">Book an appointment</span>
+        <h2>Pick a vet, pick a time.<br>Video or clinic.</h2>
+        <p>See open slots for the week, book in a minute, cancel anytime. The vet gets your summary before you meet.</p>
+        <a class="btn sun big" href="/vet/book">📅 Book now</a></div>
+      <div class="banner-art cal" aria-hidden="true"><div class="cal-card"><b>Tomorrow</b><span>10:30 AM</span><span class="on">11:00 AM</span><span>5:30 PM</span></div></div>
+    </article>
+    <article class="banner b-coral" aria-label="4 of 4">
+      <div><span class="kicker">Food &amp; nutrition</span>
+        <h2>The right food,<br>delivered. Pay on delivery.</h2>
+        <p>Puppy, cat and cattle food, mineral mixture, bowls. Or send a feeding pack to street dogs near you.</p>
+        <a class="btn mint big" href="/shop">🛒 Visit the shop</a></div>
+      <div class="banner-art" aria-hidden="true"><span class="bowl">🥣</span>{{ d.heart(60) }}</div>
+    </article>
   </div>
-  <div class="card" style="box-shadow:5px 5px 0 var(--coral)">
-    <h3 style="font-size:24px">🚑 Emergency?</h3>
-    <p>Trouble breathing, fits, poisoning, bloat, or hit by a vehicle: don't wait for a chat.</p>
-    <a class="btn coral big" href="tel:1962" style="width:100%">Call 1962 (govt. animal ambulance)</a>
-    <button class="btn" id="findVet" type="button" style="width:100%;margin-top:10px">📍 Clinics near me</button>
+  <div class="banner-nav">
+    <button type="button" class="bn-arrow" id="bPrev" aria-label="Previous poster">‹</button>
+    <div class="banner-dots" id="bDots" role="tablist" aria-label="Choose poster"></div>
+    <button type="button" class="bn-arrow" id="bNext" aria-label="Next poster">›</button>
   </div>
-  <div class="card" style="box-shadow:5px 5px 0 var(--sky)">
-    <h3 style="font-size:24px">🥣 Food &amp; care</h3>
-    <p>What to feed dogs, puppies, cats and cows, and “Can I feed this?” for any food, from a reviewed list.</p>
-    <a class="btn sky big" href="/app?go=food" data-chat="food" style="width:100%">Check a food</a>
-  </div>
-</div>
+</section>
 
+<!-- Quick actions -->
 <section>
-  <div class="section-title"><h2>Vets online now</h2><span class="hand">verified registration</span></div>
-  <div class="grid3">
-    {% for v in online %}
-    <div class="card"><b class="display" style="font-size:20px">{{ v.name }}</b>
-      <p style="margin:4px 0">{{ v.clinic or '' }}</p>
-      <p class="note" style="margin:0">{{ v.qualification or '' }} · {{ v.council or '' }} · speaks {{ v.langs|join(', ') }}</p>
-      <p style="margin:8px 0 0"><span class="pill LOW">🟢 online</span> <span class="pill">{{ 'free' if v.fee == 0 else '₹' ~ v.fee ~ ' for pets' }}</span>{% if v.free_for_strays %} <span class="pill">free for strays</span>{% endif %}</p>
-    </div>
+  <div class="quick4">
+    <a class="qa" href="/app?go=vet" data-chat="vet" style="--c:var(--mint)"><span class="qi">🩺</span><b>Talk to a vet now</b><span>{{ online|length }} online · free for street animals</span></a>
+    <a class="qa" href="/vet/book" style="--c:var(--sky)"><span class="qi">📅</span><b>Book an appointment</b><span>Video consult or clinic visit</span></a>
+    <a class="qa" href="/shop" style="--c:var(--sun)"><span class="qi">🛒</span><b>Food &amp; nutrition</b><span>Pay on delivery · feed a stray</span></a>
+    <a class="qa" href="tel:1962" style="--c:var(--coral)"><span class="qi">🚑</span><b>Emergency? Call 1962</b><span>Govt. animal ambulance</span></a>
+  </div>
+  <p class="note" style="margin-top:12px">Trouble breathing, fits, poisoning, bloat or hit by a vehicle: don't wait for a chat. Call 1962 or <button class="linkbtn" id="findVet" type="button">find clinics near me</button>.</p>
+</section>
+
+<!-- Vets -->
+<section>
+  <div class="section-title"><h2>Our vets</h2><span class="hand">registration checked by a person</span></div>
+  <div class="chips" role="group" aria-label="Filter vets">
+    <button type="button" class="chip on" data-f="all">All</button>
+    <button type="button" class="chip" data-f="online">🟢 Online now</button>
+    <button type="button" class="chip" data-f="strays">Free for street animals</button>
+    <button type="button" class="chip" data-f="free">Free for pets</button>
+  </div>
+  <div class="grid3" id="vetGrid">
+    {% for v in vets %}
+    <article class="card vetcard" data-online="{{ 1 if v.online and v.user_id else 0 }}" data-strays="{{ 1 if v.free_for_strays else 0 }}" data-free="{{ 1 if v.fee == 0 else 0 }}">
+      <div class="vet-top">
+        <div class="avatar" aria-hidden="true">{{ v.name.replace('Dr. ', '').replace('Sample ', '')[:1] }}</div>
+        <div><b class="display" style="font-size:20px">{{ v.name }}</b>
+          <p class="note" style="margin:0">{{ v.qualification or 'Veterinarian' }}</p></div>
+      </div>
+      <p style="margin:10px 0 4px">🏥 {{ v.clinic or 'Online consults' }}</p>
+      <p class="note" style="margin:0">🗣️ {{ v.langs|join(', ') }} · {{ v.council or '' }}</p>
+      <p style="margin:10px 0">{% if v.online and v.user_id %}<span class="pill LOW">🟢 online</span>{% else %}<span class="pill">⚪ offline</span>{% endif %}
+        <span class="pill">{{ 'Free' if v.fee == 0 else '₹' ~ v.fee }} for pets</span>{% if v.free_for_strays %} <span class="pill">free for strays</span>{% endif %}
+        {% if v.sample %} <span class="pill" style="background:#eee">sample</span>{% endif %}</p>
+      <div class="row2">
+        <a class="btn sky small" href="/vet/book?vet={{ v.id }}">📅 Book</a>
+        {% if v.online and v.user_id %}<a class="btn mint small" href="/app?go=vet" data-chat="vet">💬 Chat now</a>{% endif %}
+      </div>
+    </article>
     {% else %}
-    <p class="note">No vet is online right now. Start a consult anyway: the first vet who comes online will see it, and you'll get a message.</p>
+    <p class="note">No vet has joined yet. Start a consult anyway: the first vet who comes online will see it.</p>
     {% endfor %}
   </div>
-  {% if online and online[0].sample %}<p class="note" style="margin-top:10px">These are <b>sample vets</b> for the prototype. Real vets join below and are listed only after their registration is checked.</p>{% endif %}
+  <p class="note" id="vetNone" hidden>No vet matches this filter right now.</p>
+  {% if vets and vets[0].sample %}<p class="note" style="margin-top:10px">Vets marked <b>sample</b> are for the prototype demo: bookings with them are demo bookings. Real vets join below and are listed after their registration is checked.</p>{% endif %}
+</section>
+
+<!-- Vaccines -->
+<section id="vaccines">
+  <div class="section-title"><h2>Vaccination schedule</h2><span class="hand">your vet decides the final plan</span></div>
+  <div class="chips" role="tablist" aria-label="Animal">
+    <button type="button" class="chip on" role="tab" aria-selected="true" data-vx="dog">🐶 Dogs</button>
+    <button type="button" class="chip" role="tab" aria-selected="false" data-vx="cat">🐱 Cats</button>
+    <button type="button" class="chip" role="tab" aria-selected="false" data-vx="cow">🐄 Cows</button>
+  </div>
+  {% for sp, rows in vaccines.items() %}
+  <ol class="vx" data-vxp="{{ sp }}" {% if not loop.first %}hidden{% endif %}>
+    {% for when, what in rows %}<li><b>{{ when }}</b><span>{{ what }}</span></li>{% endfor %}
+  </ol>
+  {% endfor %}
+  <p class="note" style="margin-top:10px">General guidance from Indian veterinary practice and the government's NADCP programme. Street dogs are vaccinated against rabies under the Animal Birth Control Rules, 2023: ask your municipal ABC centre. <a href="/vet/book">Book a vaccination visit →</a></p>
+</section>
+
+<!-- Nutrition -->
+<section>
+  <div class="section-title"><h2>Food &amp; nutrition</h2><a class="btn small" href="/shop">See all products →</a></div>
+  <div class="grid4">
+    {% for p in products %}
+    <a class="card prod mini-prod" href="/shop?a={{ p[1] }}"><span class="pe" aria-hidden="true">{{ p[5] }}</span><b>{{ p[2] }}</b><span class="note">{{ p[3] }}</span><b class="price">₹{{ p[4] }}</b></a>
+    {% endfor %}
+  </div>
+  <p class="note" style="margin-top:10px">Not sure what's safe? Ask “Can I feed this?” in the <a href="/app?go=food" data-chat="food">chat</a>: it answers from a reviewed food list.</p>
 </section>
 
 <section>
-  <div class="section-title"><h2>How a consult works</h2></div>
+  <div class="section-title"><h2>How an online consult works</h2></div>
   <ol class="flow">
     <li><span class="n">1</span><b>Tell us</b><p>Pet or street animal, which animal, a photo and a few words in any of 6 languages.</p></li>
     <li><span class="n">2</span><b>Safe first steps</b><p>A vet-reviewed care card and an urgency. Emergencies go to a clinic or 1962 first.</p></li>
-    <li><span class="n">3</span><b>A vet joins</b><p>Pick a vet online. They see a one-page summary before they say yes.</p><em>next vet after 5 min</em></li>
+    <li><span class="n">3</span><b>A vet joins</b><p>They see a one-page summary before they say yes.</p><em>next vet after 5 min</em></li>
     <li><span class="n">4</span><b>Chat or video</b><p>Each side reads in their own language. Photos and a video link.</p></li>
-    <li><span class="n">5</span><b>Vet's note + follow-up</b><p>The vet's advice is saved in the animal's record. We check in after 2 days.</p></li>
+    <li><span class="n">5</span><b>Vet's note + follow-up</b><p>The advice is saved in the animal's record. We check in after 2 days.</p></li>
   </ol>
   <p class="note" style="margin-top:10px">The AI organises and translates; only the vet advises. StrayWatch's AI never diagnoses, names a medicine or gives a dose.</p>
 </section>
@@ -65,11 +141,11 @@
 </section>
 
 <section id="join">
-  <div class="section-title"><h2>Are you a vet? Join StrayWatch</h2><span class="hand">help animals from your phone</span></div>
+  <div class="section-title"><h2>Are you a vet? Join StrayWatch</h2><span class="hand">consults and bookings on your phone</span></div>
   {% if joined %}
   <div class="card" style="background:var(--mint-soft)">
     <h3>Thank you, {{ joined.name }}! 🙏</h3>
-    <p>Your vet code is <b class="display" style="font-size:24px">{{ joined.code }}</b>. Open the <a href="/app">StrayWatch app</a> and type <b>vet {{ joined.code }}</b> to link your account. We'll check your registration and message you there when you're verified. Then type <b>online</b> to receive consults.</p>
+    <p>Your vet code is <b class="display" style="font-size:24px">{{ joined.code }}</b>. Open the <a href="/app">StrayWatch app</a> and type <b>vet {{ joined.code }}</b> to link your account. We'll check your registration and message you there when you're verified. Then type <b>online</b> to receive consults; bookings arrive in the same chat.</p>
   </div>
   {% else %}
   <form class="card form" method="post" action="/vet/join">
@@ -90,10 +166,50 @@
 {% endblock %}
 {% block scripts %}
 <script>
-document.getElementById("findVet").onclick = () => {
-  const go = (q) => window.open("https://www.google.com/maps/search/veterinary+clinic" + q, "_blank", "noopener");
-  if (!navigator.geolocation) return go("");
-  navigator.geolocation.getCurrentPosition(p => go(`/@${p.coords.latitude},${p.coords.longitude},14z`), () => go(""), {timeout: 8000});
-};
+(function () {
+  // Banners: swipe/arrows/dots; auto-advance unless the person prefers less motion or is interacting.
+  const track = document.getElementById("bTrack"), slides = [...track.children], dots = document.getElementById("bDots");
+  let i = 0, timer = null;
+  slides.forEach((_, k) => { const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-label", "Poster " + (k + 1)); b.onclick = () => go(k, true); dots.appendChild(b); });
+  function go(k, user) {
+    i = (k + slides.length) % slides.length;
+    track.style.transform = `translateX(-${i * 100}%)`;
+    slides.forEach((s, n) => { s.setAttribute("aria-hidden", n !== i); s.querySelectorAll("a,button").forEach(el => el.tabIndex = n === i ? 0 : -1); });
+    [...dots.children].forEach((d, n) => d.setAttribute("aria-current", n === i));
+    if (user) stop();
+  }
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function start() { if (!still && !timer) timer = setInterval(() => go(i + 1), 6000); }
+  function stop() { clearInterval(timer); timer = null; }
+  document.getElementById("bPrev").onclick = () => go(i - 1, true);
+  document.getElementById("bNext").onclick = () => go(i + 1, true);
+  const box = track.parentElement;
+  box.addEventListener("mouseenter", stop); box.addEventListener("mouseleave", start); box.addEventListener("focusin", stop);
+  let x0 = null;
+  box.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; stop(); }, { passive: true });
+  box.addEventListener("touchend", e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1), true); x0 = null; });
+  go(0); start();
+
+  // Vet filters
+  const cards = [...document.querySelectorAll(".vetcard")];
+  document.querySelectorAll("[data-f]").forEach(c => c.onclick = () => {
+    document.querySelectorAll("[data-f]").forEach(x => x.classList.toggle("on", x === c));
+    const f = c.dataset.f; let shown = 0;
+    cards.forEach(v => { const ok = f === "all" || v.dataset[f] === "1"; v.hidden = !ok; shown += ok; });
+    document.getElementById("vetNone").hidden = shown > 0;
+  });
+
+  // Vaccine tabs
+  document.querySelectorAll("[data-vx]").forEach(c => c.onclick = () => {
+    document.querySelectorAll("[data-vx]").forEach(x => { x.classList.toggle("on", x === c); x.setAttribute("aria-selected", x === c); });
+    document.querySelectorAll("[data-vxp]").forEach(p => p.hidden = p.dataset.vxp !== c.dataset.vx);
+  });
+
+  document.getElementById("findVet").onclick = () => {
+    const go = (q) => window.open("https://www.google.com/maps/search/veterinary+clinic" + q, "_blank", "noopener");
+    if (!navigator.geolocation) return go("");
+    navigator.geolocation.getCurrentPosition(p => go(`/@${p.coords.latitude},${p.coords.longitude},14z`), () => go(""), {timeout: 8000});
+  };
+})();
 </script>
 {% endblock %}

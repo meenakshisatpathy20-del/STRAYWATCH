@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Order {{ o.code }} · StrayWatch{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div class="hand">thank you{% if o.for_strays %} for feeding street animals 💛{% endif %}</div>
+  <h1>Order {{ o.code }}</h1>
+  <p>We'll call you to confirm before anything is sent. You pay on delivery.</p>
+</div>
+<div class="grid2-book">
+  <div class="card ticket">
+    <p class="pill {{ 'LOW' if o.status != 'cancelled' else 'HIGH' }}" style="margin:0 0 10px">{{ {'placed': '🕐 Placed: we will call you', 'confirmed': '✅ Confirmed', 'delivered': '📦 Delivered', 'cancelled': 'Cancelled'}[o.status] }}</p>
+    {% for i in o.items %}<div class="ci"><span>{{ i.name }}{% if i.qty > 1 %} <small>× {{ i.qty }}</small>{% endif %}</span><b>₹{{ i.price * i.qty }}</b></div>{% endfor %}
+    <div class="ci total"><span>Total, pay on delivery</span><b>₹{{ o.total }}</b></div>
+  </div>
+  <div class="card">
+    <h3>Delivery</h3>
+    {% if mine %}
+    <p><b>{{ o.name }}</b> · {{ o.phone[:2] }}xxxxxx{{ o.phone[-2:] }}</p>
+    <p>{{ o.address }} · {{ o.pincode }}</p>
+    {% else %}<p class="note">Delivery details are visible only on the phone that placed the order.</p>{% endif %}
+    {% if o.for_strays %}<p class="note">We'll match this with a StrayWatch volunteer feeder near {{ o.pincode }} and tell you when the animals are fed. If no feeder is near you yet, we'll tell you on the call before anything is sent.</p>{% endif %}
+    <div class="row2" style="margin-top:12px"><a class="btn small" href="/shop">Keep shopping</a><a class="btn small" href="/vet">Vet care</a></div>
+  </div>
+</div>
+{% endblock %}

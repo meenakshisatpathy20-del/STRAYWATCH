@@ -188,7 +188,7 @@ def describe(s, user_id, image: str | None, message: str = "") -> dict:
         "aggressive": _bool(d.get("aggressive", False)),
         "urgency": _enum(d.get("urgency"), URGENCY, "medium"),
         "first_aid_card": _enum(d.get("first_aid_card"), set(FIRST_AID_IDS), "general"),
-        "summary": str(d.get("summary") or "Animal reported, details unclear.")[:220],
+        "summary": str(d.get("summary") or "I couldn't read the photo clearly just now.")[:220],
         "confidence": _float01(d.get("confidence"), 0.5 if d else 0.0),
         "ai_ok": bool(d),
     }

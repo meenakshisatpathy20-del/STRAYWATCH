@@ -73,7 +73,8 @@
   async function post(item) {
     const fd = new FormData();
     fd.append("text", item.text || ""); fd.append("button", item.button || "");
-    if (!APP) fd.append("demo", "1");  // the demo page: sample responders only, kept apart from real reports
+    if (!APP) fd.append("demo", "1");
+    else if (item.text || item.photo || item.lat != null) { try { localStorage.setItem("sw_engaged", "1"); } catch (e) {} setTimeout(() => window.dispatchEvent(new Event("sw-engaged")), 4000); }  // the demo page: sample responders only, kept apart from real reports
     if (item.lat != null) { fd.append("lat", item.lat); fd.append("lon", item.lon); }
     if (item.photo) fd.append("photo", item.photo instanceof File ? item.photo : new File([await (await fetch(item.photo)).blob()], "photo.jpg", { type: "image/jpeg" }));
     const r = await fetch("/api/chat", { method: "POST", body: fd });
@@ -342,6 +343,7 @@
     if (g && GO[g]) await send(GO[g]);
   }
   window.addEventListener("sw-lang", () => setTimeout(runGo, 300));
+  window.swGo = (g) => GO[g] && send(GO[g]);  // used by the app's Vet tab
   const seen = new URLSearchParams(location.search).get("seen");
   if (seen) { ensureLang().then(() => send({ text: "SEEN " + seen })); }
   else if (!msgs.children.length) {
