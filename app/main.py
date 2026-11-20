@@ -261,6 +261,11 @@ def _test_count() -> int:
     return sum(f.read_text(encoding="utf-8").count("\ndef test_") for f in tests.glob("test_*.py")) if tests.exists() else 0
 
 
+@app.get("/video", response_class=HTMLResponse)
+def video_page(request: Request):
+    return page(request, "video.html", "/video")
+
+
 @app.get("/docs", response_class=HTMLResponse)
 def docs_page(request: Request):
     return page(request, "docs.html", "/docs", tests=_test_count())
