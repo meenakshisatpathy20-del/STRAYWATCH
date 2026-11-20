@@ -12,7 +12,7 @@ animal is safe. Pet owners and caretakers can also **talk to a verified vet onli
 
 <p>
 <a href="https://straywatch-0h6w.onrender.com"><img alt="Live site" src="https://img.shields.io/badge/live-straywatch-FFD23F?style=for-the-badge"></a>
-<a href="https://straywatch-0h6w.onrender.com/video"><img alt="Demo video" src="https://img.shields.io/badge/demo-6_min_video-FF8A7A?style=for-the-badge"></a>
+<a href="https://straywatch-0h6w.onrender.com/video"><img alt="Demo video" src="https://img.shields.io/badge/demo-3.5_min_video-FF8A7A?style=for-the-badge"></a>
 <img alt="Tests" src="https://img.shields.io/badge/tests-101_passing-3BC9A3?style=for-the-badge">
 <img alt="Languages" src="https://img.shields.io/badge/languages-6-5BC0EB?style=for-the-badge">
 </p>
