@@ -85,7 +85,7 @@ section{padding:46px 0}
 .bubble .btns button{min-height:42px;flex:1 1 auto;border:2.5px solid var(--ink);border-radius:13px;background:var(--sun);font:800 14px Nunito,"Noto Sans Devanagari","Noto Sans Bengali","Noto Sans Tamil","Noto Sans Telugu",sans-serif;cursor:pointer;box-shadow:2px 2px 0 var(--ink);padding:0 10px;color:var(--ink)}
 .bubble .btns button:nth-child(2){background:#fff}.bubble .btns button:nth-child(3){background:var(--sky-soft)}
 .bubble .btns button:disabled{opacity:.45;cursor:default}
-.bubble a.link{display:inline-block;margin-top:6px;font-weight:800;word-break:break-all}
+.bubble a.link{display:inline-flex;align-items:center;min-height:40px;margin-top:8px;padding:0 14px;font-weight:800;color:var(--ink);text-decoration:none;background:var(--sky-soft);border:2.5px solid var(--ink);border-radius:13px;box-shadow:2px 2px 0 var(--ink)}
 .typing{align-self:flex-start;font-family:"Gochi Hand";font-size:18px;color:var(--muted)}
 .composer{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#fff;border-top:2.5px solid var(--ink)}
 .composer input[type=text]{flex:1;min-width:0;height:46px;border:2px solid var(--ink);border-radius:23px;padding:0 16px;font:600 15px Nunito;background:var(--paper)}

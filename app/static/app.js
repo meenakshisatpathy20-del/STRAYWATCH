@@ -11,6 +11,17 @@
   document.querySelectorAll("[data-as]").forEach((b) => { helperLog[b.dataset.as] = []; });
   let helperAs = (document.querySelector('[data-as][aria-pressed="true"]') || document.querySelector("[data-as]") || {}).dataset?.as || "demo:priya";
 
+  // Friendly, translated names for links instead of raw web addresses.
+  function linkLabel(u) {
+    const k = /\/track\//.test(u) ? "lk_track" : /\/vet\/booking\//.test(u) ? "lk_booking" : /\/vet\/book/.test(u) ? "lk_book"
+      : /\/shop\/order\//.test(u) ? "lk_order" : /\/shop/.test(u) ? "lk_shop" : /\/lost\/|#lost/.test(u) ? "lk_poster"
+      : /meet\.jit\.si/.test(u) ? "lk_video" : /veterinary|clinic/i.test(u) ? "lk_clinic" : /maps\.google|google\.com\/maps/.test(u) ? "lk_maps" : "lk_open";
+    const EN = { lk_track: "📍 Track this case", lk_booking: "📅 Open your booking", lk_book: "📅 Book an appointment",
+      lk_order: "🛒 Open your order", lk_shop: "🛒 Order food", lk_poster: "📄 Open the poster", lk_video: "🎥 Join the video call",
+      lk_clinic: "🏥 Clinics near you", lk_maps: "🗺️ Open in Maps", lk_open: "🔗 Open link" };
+    const v = T(k, EN[k]);
+    return v === k ? EN[k] : v;
+  }
   function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   function fmt(t) { return esc(t).replace(/\*([^*\n]+)\*/g, "<b>$1</b>"); }
 
@@ -21,7 +32,7 @@
     if (m.image_url) html += `<img src="${esc(m.image_url.replace(/^https?:\/\/[^/]+/, ""))}" alt="photo">`;
     if (m.previewSrc) html += `<img src="${m.previewSrc}" alt="your photo">`;
     if (m.text) html += `<div>${fmt(m.text)}</div>`;
-    if (m.link) html += `<a class="link" href="${esc(m.link.replace(/^https?:\/\/localhost:\d+/, ""))}" target="_blank" rel="noopener">${esc(m.link.replace(/^https?:\/\//, ""))}</a>`;
+    if (m.link) html += `<a class="link" href="${esc(m.link.replace(/^https?:\/\/localhost:\d+/, ""))}" target="_blank" rel="noopener">${esc(linkLabel(m.link))}</a>`;
     const btns = [...(m.buttons || []), ...(m.options || [])];
     if (btns.length || m.ask_location) {
       html += `<div class="btns"></div>`;
