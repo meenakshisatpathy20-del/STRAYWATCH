@@ -173,7 +173,7 @@
       : send({ lat: DEMO_SPOT.lat, lon: DEMO_SPOT.lon, echo: "📍 " + DEMO_SPOT.label + " (demo spot: your location was blocked)" });
     if (!navigator.geolocation) return fallback();
     navigator.geolocation.getCurrentPosition(
-      (p) => send({ lat: p.coords.latitude, lon: p.coords.longitude, echo: "📍 My location" }),
+      (p) => send({ lat: p.coords.latitude, lon: p.coords.longitude, echo: T("e_loc", "📍 My location") }),
       fallback, { timeout: 10000, enableHighAccuracy: true, maximumAge: 60000 });
   }
 
@@ -186,7 +186,7 @@
   });
   $("#file").addEventListener("change", (e) => {
     const f = e.target.files[0]; if (!f) return;
-    send({ file: f, echo: "📷 Photo", previewSrc: URL.createObjectURL(f) });
+    send({ file: f, echo: T("e_photo", "📷 Photo"), previewSrc: URL.createObjectURL(f) });
     e.target.value = "";
   });
   $("#locbtn").addEventListener("click", () => shareLocation(APP || confirm("Share your real location?\n\nCancel = use the demo spot in Lalpur, Ranchi (where the sample animals live).") ? "real" : "demo"));
@@ -347,15 +347,15 @@
   // Arrived from a poster's "I've seen her" link?
   const GO = { vet: { button: "m:vet", echo: "🩺 Talk to a vet" }, food: { button: "v:food", echo: "🥣 Food & care" },
                sos: { button: "m:sos", echo: "🚨 Hurt animal: SOS" } };
+  const GO_KEY = { vet: "vh_talk", food: "vh_food", sos: "e_sos" };  // echo deep links in the person's language
   const go = new URLSearchParams(location.search).get("go");
   if (go && GO[go]) { try { sessionStorage.setItem("sw_go", go); } catch (e) {} }
   async function runGo() {
     let g = null; try { g = sessionStorage.getItem("sw_go"); sessionStorage.removeItem("sw_go"); } catch (e) {}
-    if (g && GO[g]) await send(GO[g]);
+    if (g && GO[g]) await send({ ...GO[g], echo: T(GO_KEY[g], GO[g].echo) });
   }
   window.addEventListener("sw-lang", () => setTimeout(runGo, 300));
-  const GO_LABEL = { vet: "vh_talk", food: "vh_food" };  // echo the tapped button in the person's language
-  window.swGo = (g) => GO[g] && send({ ...GO[g], echo: GO_LABEL[g] ? T(GO_LABEL[g], GO[g].echo) : GO[g].echo });  // used by the app's Vet tab
+  window.swGo = (g) => GO[g] && send({ ...GO[g], echo: T(GO_KEY[g], GO[g].echo) });  // used by the app's Vet tab
   const seen = new URLSearchParams(location.search).get("seen");
   if (seen) { ensureLang().then(() => send({ text: "SEEN " + seen })); }
   else if (!msgs.children.length) {

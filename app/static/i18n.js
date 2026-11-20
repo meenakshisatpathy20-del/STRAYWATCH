@@ -1,6 +1,9 @@
 // The app's own labels in 6 languages (built by scripts/build_ui_i18n.py; edit freely).
 const I18N = {
  "en": {
+  "e_sos": "🚨 Hurt animal: SOS",
+  "e_loc": "📍 My location",
+  "e_photo": "📷 Photo",
   "oc_title": "📋 Open cases near me",
   "oc_desc": "For helpers: animals nearby that still need someone",
   "lk_track": "📍 Track this case",
@@ -71,6 +74,9 @@ const I18N = {
   "loc_btn": "Share location"
  },
  "hi": {
+  "e_sos": "🚨 घायल जानवर: SOS",
+  "e_loc": "📍 मेरी लोकेशन",
+  "e_photo": "📷 फ़ोटो",
   "oc_title": "📋 मेरे पास के खुले केस",
   "oc_desc": "मददगारों के लिए: पास के जानवर जिन्हें अभी भी किसी की ज़रूरत है",
   "lk_track": "📍 केस देखें",
@@ -141,6 +147,9 @@ const I18N = {
   "loc_btn": "स्थान साझा करें"
  },
  "bn": {
+  "e_sos": "🚨 আহত প্রাণী: SOS",
+  "e_loc": "📍 আমার অবস্থান",
+  "e_photo": "📷 ছবি",
   "oc_title": "📋 আমার কাছের খোলা কেস",
   "oc_desc": "সাহায্যকারীদের জন্য: কাছের যে প্রাণীদের এখনও কাউকে দরকার",
   "lk_track": "📍 কেস দেখুন",
@@ -211,6 +220,9 @@ const I18N = {
   "loc_btn": "অবস্থান শেয়ার করুন"
  },
  "ta": {
+  "e_sos": "🚨 காயமடைந்த விலங்கு: SOS",
+  "e_loc": "📍 என் இருப்பிடம்",
+  "e_photo": "📷 புகைப்படம்",
   "oc_title": "📋 அருகிலுள்ள திறந்த வழக்குகள்",
   "oc_desc": "உதவியாளர்களுக்கு: இன்னும் உதவி தேவைப்படும் அருகிலுள்ள விலங்குகள்",
   "lk_track": "📍 வழக்கைப் பின்தொடருங்கள்",
@@ -281,6 +293,9 @@ const I18N = {
   "loc_btn": "இடத்தைப் பகிர்"
  },
  "te": {
+  "e_sos": "🚨 గాయపడిన జంతువు: SOS",
+  "e_loc": "📍 నా లొకేషన్",
+  "e_photo": "📷 ఫోటో",
   "oc_title": "📋 నా దగ్గర ఓపెన్ కేసులు",
   "oc_desc": "సహాయకుల కోసం: ఇంకా ఎవరైనా అవసరమైన దగ్గర్లోని జంతువులు",
   "lk_track": "📍 కేసును చూడండి",
@@ -351,6 +366,9 @@ const I18N = {
   "loc_btn": "స్థానం పంచుకోండి"
  },
  "mr": {
+  "e_sos": "🚨 जखमी प्राणी: SOS",
+  "e_loc": "📍 माझे ठिकाण",
+  "e_photo": "📷 फोटो",
   "oc_title": "📋 जवळचे खुले केस",
   "oc_desc": "मदतनिसांसाठी: जवळचे प्राणी ज्यांना अजूनही कोणाची गरज आहे",
   "lk_track": "📍 केस पाहा",
