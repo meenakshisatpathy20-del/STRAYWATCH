@@ -1,34 +1,54 @@
 Project: StrayWatch
-Tagline: Every street friend, known and cared for.
+Tagline: One photo, in your language, brings the nearest rescuer or vet to an injured animal in seconds.
 Hackathon: BharatCode Build League
 Category: Everyday assistance / Chatbots & communities (AI agent app with a WhatsApp add-on)
 
-What it does
-------------
-StrayWatch is a free, installable mobile web app (with an optional WhatsApp add-on) for the people who look after
-India's community animals.
-- My Animals: caretakers register the street dogs and cows they feed with one photo. A daily photo is recognised
-  as the right animal, logged in a health diary, compared with the last photo for visible changes, and vaccine
-  reminders follow.
-- Rescue SOS: anyone can send a photo (or words, at night) and a location. The AI triages the case, recognises
-  whether it is a registered animal, alerts that animal's caretaker first, then the nearest volunteers, and moves
-  on by itself if nobody answers in 3 minutes. Safety-first first-aid cards with sources go to the reporter.
-- Lost & Found: owners post a lost cow or dog; the AI searches every photo people sent nearby, checks each new
-  photo against open posters, and gives a public poster that never shows the owner's number or exact spot.
-- Everything works in English, Hindi, Bengali, Tamil, Telugu and Marathi.
+Live demo: https://straywatch-0h6w.onrender.com   (60-second try: https://straywatch-0h6w.onrender.com/demo)
+Demo video: https://straywatch-0h6w.onrender.com/video
+Repository: https://github.com/meenakshisatpathy20-del/straywatch
+Built by: meenakshisatpathy20-del, Ranchi
+
+The problem
+-----------
+Every day on Indian roads, stray and community animals are hit, injured or fall sick, and help reaches them late.
+Rescuers, vets and city teams exist, but they find out too late, without a photo or an exact location, and nobody
+owns the case. An injured animal lying in a lane also becomes the next road accident.
+
+What it does: one journey, three parts
+--------------------------------------
+StrayWatch is a free, installable web app (with an optional WhatsApp add-on) in English, Hindi, Bengali, Tamil,
+Telugu and Marathi. It follows an animal from the moment it is hurt to the day it is healthy again.
+
+1. Rescue (the core): anyone sends a photo, a few words or a landmark. The AI reads it, tested rules set the urgency,
+   and the right person nearby is alerted: the animal's caretaker first, then a rescue NGO, a vet, the municipal
+   cattle team or traffic police. If nobody answers in 3 minutes it moves on by itself. A case closes only with a
+   photo proof the AI checks; the reporter tracks every step. Rescuers get a private chat with the reporter,
+   "open cases near me", transport requests and nearby animal hospitals; new helpers are approved by a coordinator.
+2. Treatment: an AI pre-check writes a one-page summary for a verified vet, who joins a live chat (each side in their
+   own language) or a booked video / clinic slot. Emergencies go to the 1962 animal ambulance first. Vaccination
+   schedules, a food guide and pay-on-delivery food (including a street-dog feeding pack) support recovery.
+3. Fewer accidents: driver warnings while an injured animal is on the road, a hotspot map of where and when animals
+   get hurt, and Lost & Found that matches lost animals against every photo sent nearby.
+
+Paid pet consults, food orders and city dashboards are planned to keep rescue free for citizens and rescuers.
 
 How the BharatCode model API is used
 ------------------------------------
 All model calls go through the BharatCode (Adaption) Responses API with the official `adaption` Python SDK
-(see app/ai.py). Hosted models used:
-- qwen3.5-397b (vision): reading animal photos and Hinglish/Indian-language messages into a validated triage
-  record; comparing a new photo with a labelled contact sheet of nearby animals to recognise individuals and to
-  match lost animals; batch translation of every reply into the user's language.
-- gemma-4-31b-it (vision): health comparison between a check-in photo and the previous one; intent detection.
-Design rule: the model reads and compares; plain code decides and enforces (helper radius, escalation timers,
-privacy, confidence thresholds). Every model call is timed and shown in a live trace on the website.
+(app/ai.py). Hosted models:
+- qwen3.5-397b (vision): reading a report photo + Hinglish / Indian-language message into a validated triage record
+  (~2-3 s); recognising a registered animal among look-alikes (~1.2 s); the vet pre-check summary; matching lost
+  animals; batch translation of every reply into the person's language.
+- gemma-4-31b-it (vision): checking the rescuer's proof photo; comparing a check-in photo with the last one;
+  understanding chat intent when keywords don't match.
+Design rule: the model reads and compares; plain, unit-tested code decides and enforces (urgency, who is alerted,
+helper radius, escalation timers, privacy, confidence thresholds). Every reply is validated field by field with a
+safe fallback, and every call is timed and shown in a live AI trace on the demo page.
 
-Live demo: https://straywatch-0h6w.onrender.com  (app: https://straywatch-0h6w.onrender.com/app)
-Repository: https://github.com/meenakshisatpathy20-del/straywatch
+Proof
+-----
+101 automated tests in GitHub Actions; a two-city load test of 1,238 reports (every case got a responder, 0 alerts
+beyond 8 km or to the wrong city). Honest limits: responders and vets on the live site are labelled samples until
+real partners join; care cards await review by a partner vet.
+
 Run: see README.md (pip install -r requirements.txt; uvicorn app.main:app)
-Built by: meenakshisatpathy20-del, Ranchi
