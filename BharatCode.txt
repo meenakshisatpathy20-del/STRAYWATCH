@@ -3,8 +3,8 @@ Tagline: One photo, in your language, brings the nearest rescuer or vet to an in
 Hackathon: BharatCode Build League
 Category: Everyday assistance / Chatbots & communities (AI agent app with a WhatsApp add-on)
 
-Live demo: https://straywatch-0h6w.onrender.com   (60-second try: https://straywatch-0h6w.onrender.com/demo)
-Demo video: https://straywatch-0h6w.onrender.com/video
+Live demo: https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net   (60-second try: https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/demo)
+Demo video: https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/video
 Repository: https://github.com/meenakshisatpathy20-del/straywatch
 Built by: meenakshisatpathy20-del, Ranchi
 

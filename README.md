@@ -13,18 +13,18 @@ reaches them late, and an injured animal lying in a lane becomes the next accide
 they just find out too late, without a photo or an exact location, and nobody owns the case.
 
 <p>
-<a href="https://straywatch-0h6w.onrender.com"><img alt="Live site" src="https://img.shields.io/badge/live-straywatch-FFD23F?style=for-the-badge"></a>
-<a href="https://straywatch-0h6w.onrender.com/video"><img alt="Demo video" src="https://img.shields.io/badge/demo-3.5_min_video-FF8A7A?style=for-the-badge"></a>
+<a href="https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net"><img alt="Live site" src="https://img.shields.io/badge/live-straywatch-FFD23F?style=for-the-badge"></a>
+<a href="https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/video"><img alt="Demo video" src="https://img.shields.io/badge/demo-3.5_min_video-FF8A7A?style=for-the-badge"></a>
 <img alt="Tests" src="https://img.shields.io/badge/tests-101_passing-3BC9A3?style=for-the-badge">
 <img alt="Languages" src="https://img.shields.io/badge/languages-6-5BC0EB?style=for-the-badge">
 </p>
 
-**Try it in 60 seconds:** open the [live demo](https://straywatch-0h6w.onrender.com/demo) → tap *Hurt dog (Hinglish)* →
+**Try it in 60 seconds:** open the [live demo](https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/demo) → tap *Hurt dog (Hinglish)* →
 watch the AI read it, the rules set **URGENT**, and the caretaker's phone (right) get the alert in Hindi.
 
-🌐 [Website](https://straywatch-0h6w.onrender.com) · 📱 [App](https://straywatch-0h6w.onrender.com/app) ·
-▶ [Demo video](https://straywatch-0h6w.onrender.com/video) · 🤖 [Agent Room](https://straywatch-0h6w.onrender.com/room) ·
-📄 [Tech docs](https://straywatch-0h6w.onrender.com/docs)
+🌐 [Website](https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net) · 📱 [App](https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/app) ·
+▶ [Demo video](https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/video) · 🤖 [Agent Room](https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/room) ·
+📄 [Tech docs](https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/docs)
 
 ---
 
@@ -181,7 +181,7 @@ one place: [`app/ai.py`](app/ai.py). Two hosted models, each picked for the job:
 3-minute escalation timers, privacy and confidence thresholds are all tested Python, never the model. Every reply is
 validated field by field; if a call fails or the JSON is unusable, StrayWatch uses safe defaults (a reported SOS is
 still treated as urgent) instead of guessing. Calls retry with back-off on rate limits and run through a small
-concurrency cap. **Every call is timed and shown live** in the AI trace on the [demo page](https://straywatch-0h6w.onrender.com/demo):
+concurrency cap. **Every call is timed and shown live** in the AI trace on the [demo page](https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/demo):
 step, model and milliseconds.
 
 ## Measured

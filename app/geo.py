@@ -17,7 +17,7 @@ from . import config
 
 log = logging.getLogger("straywatch.geo")
 _cache: dict[str, dict | None] = {}
-UA = {"User-Agent": "StrayWatch/1.0 (community animal rescue; https://straywatch-0h6w.onrender.com)"}
+UA = {"User-Agent": "StrayWatch/1.0 (community animal rescue; https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net)"}
 MAX_KM = 60  # a landmark further than this from the person (or the pilot city) is not the one they mean
 _FILLER = r"(\b(chowk|chauk|chauraha|crossing|junction|near|ke paas|ke pass|paas|opposite|opp|samne|behind|piche|road side|corner)\b|चौक|चौराहा|के पास|के सामने)"
 
