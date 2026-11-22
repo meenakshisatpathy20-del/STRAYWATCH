@@ -2,13 +2,16 @@
 import os
 
 # Empty values (e.g. an unset field on Render) fall back to the defaults.
-DATABASE_URL = os.environ.get("DATABASE_URL") or "sqlite:///./straywatch.db"
+# On Azure App Service only /home survives a redeploy, so the SQLite file lives there.
+DATABASE_URL = os.environ.get("DATABASE_URL") or (
+    "sqlite:////home/straywatch.db" if os.environ.get("WEBSITE_HOSTNAME") else "sqlite:///./straywatch.db")
 # Render/Neon give "postgres://"; SQLAlchemy wants "postgresql://".
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = "postgresql://" + DATABASE_URL[len("postgres://"):]
 
-# Render sets RENDER_EXTERNAL_URL automatically, so the public address works without extra setup.
+# Render (RENDER_EXTERNAL_URL) and Azure App Service (WEBSITE_HOSTNAME) set the public address automatically.
 PUBLIC_BASE_URL = (os.environ.get("PUBLIC_BASE_URL") or os.environ.get("RENDER_EXTERNAL_URL")
+                   or (f"https://{os.environ['WEBSITE_HOSTNAME']}" if os.environ.get("WEBSITE_HOSTNAME") else "")
                    or "http://localhost:8000").rstrip("/")
 
 # BharatCode (Adaption) models. The SDK reads ADAPTION_API_KEY itself.

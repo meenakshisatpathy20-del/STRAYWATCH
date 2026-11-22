@@ -216,6 +216,11 @@ Optional settings: `SW_ADMIN_KEY` (verify vets at `/admin/vets`, orders and book
 **Deploy:** Render → New → Blueprint → this repo ([`render.yaml`](render.yaml)); add `ADAPTION_API_KEY` and a Postgres
 `DATABASE_URL`. A paid always-on instance is recommended for real use. On the free plan, the [`keep-awake`](.github/workflows/keep-awake.yml) workflow pings `/health` every 10 minutes so the first SOS doesn't wait for the server to wake.
 
+**Deploy on Azure App Service** (Linux, Python 3.12, Basic B1 or higher): set the startup command to
+`uvicorn app.main:app --host 0.0.0.0 --port 8000`, turn on *Always On*, add `ADAPTION_API_KEY` and
+`SCM_DO_BUILD_DURING_DEPLOYMENT=true`, and connect this repo in *Deployment Center*. The address and a SQLite file
+under `/home` are picked up automatically (or set `DATABASE_URL` to a Postgres database).
+
 **Camera on an edge box:** `pip install -r edge/requirements-edge.txt`, then
 `python edge/camera_agent.py --video rtsp://… --camera ratu-rd-01 --server https://… --key $SW_AGENT_KEY`.
 
