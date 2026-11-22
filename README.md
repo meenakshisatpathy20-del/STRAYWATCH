@@ -19,6 +19,10 @@ they just find out too late, without a photo or an exact location, and nobody ow
 <img alt="Languages" src="https://img.shields.io/badge/languages-6-5BC0EB?style=for-the-badge">
 </p>
 
+> **Live site moved to Microsoft Azure.** Earlier it ran on Render at `https://straywatch-0h6w.onrender.com` (the
+> link in our submitted deck and video). That free server is paused for this month, so the same app now runs on Azure:
+> **https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net**
+
 **Try it in 60 seconds:** open the [live demo](https://straywatch-cacyarcncugkf3cr.indiasouthcentral-01.azurewebsites.net/demo) → tap *Hurt dog (Hinglish)* →
 watch the AI read it, the rules set **URGENT**, and the caretaker's phone (right) get the alert in Hindi.
 
